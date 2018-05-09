@@ -56,7 +56,7 @@ make && make install
 # Using PicoSOCKS5
 
 ```bash
-picosocks5 -u nobody -g nobody "*:1080"
+picosocks5 -u nobody -g nobody -a authfile.txt "*:1080"
 ```
 
 For more information on running PicoSOCKS5:
