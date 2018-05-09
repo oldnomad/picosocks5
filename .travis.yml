@@ -4,9 +4,6 @@ dist: trusty
 compiler: gcc
 
 addons:
-  apt:
-    packages:
-      - automake-1.15
-    coverity_scan:
-      project: "oldnomad/picosocks5"
+  coverity_scan:
+    project: "oldnomad/picosocks5"
     build_command: "make"
