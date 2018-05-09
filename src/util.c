@@ -9,6 +9,9 @@
 #include <grp.h>
 #include "util.h"
 
+/**
+ * Parse user specified as a numeric UID or user name.
+ */
 uid_t util_parse_user(const char *user)
 {
     unsigned long uid;
@@ -25,6 +28,9 @@ uid_t util_parse_user(const char *user)
     return uid;
 }
 
+/**
+ * Parse group specified as a numeric GID or group name.
+ */
 gid_t util_parse_group(const char *group)
 {
     unsigned long gid;
@@ -41,6 +47,9 @@ gid_t util_parse_group(const char *group)
     return gid;
 }
 
+/**
+ * IPv4/IPv6 address and port to textual representation.
+ */
 int util_decode_addr(const struct sockaddr *addr, socklen_t addrlen,
                      char *buffer, size_t buflen)
 {

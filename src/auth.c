@@ -25,14 +25,22 @@
  *       is non-zero, response is sent to client.
  *   - If authentication succeeds and field auth is non-null, it contains
  *     an opaque pointer to auth_user.
+ * - To add a new method implement a stage callback and modify array METHODS[].
+ *
+ * NOTES ON FILE FORMATS
+ *
+ * - To add a new format implement a parser function and modify array
+ *   FILE_FORMATS[].
+ * - Note that "filespec" after format prefix is not necessarily a file path;
+ *   it can be an arbitrary string used to specify data source.
  */
 
 struct auth_user {
-    struct auth_user *next;
-    int method;
-    const char *username;
-    const char *secret;
-    size_t secretlen;
+    struct auth_user *next; // Pointer to next user
+    int method;             // Auth method code
+    const char *username;   // Username
+    const char *secret;     // Secret (method-specific)
+    size_t secretlen;       // Length of secret
 };
 
 struct authfile_format {
@@ -40,23 +48,30 @@ struct authfile_format {
     void (*parse)(const char *filespec);
 };
 
+/**
+ * List of supported methods, in preference decreasing order
+ */
 static int auth_method_basic(const char *peername, int stage, auth_context_t *ctxt);
-
 static const auth_method_t METHODS[] = {
     { SOCKS_AUTH_BASIC, auth_method_basic },
     { SOCKS_AUTH_NONE,  NULL              } // Look, ma, no comma!
 };
 
+/**
+ * List of supported file formats
+ */
 static void authfile_format_password(const char *filespec);
-
 static const struct authfile_format FILE_FORMATS[] = {
     { "password", authfile_format_password },
     { NULL,       authfile_format_password }
 };
 
-static struct auth_user *USER_LIST = NULL;
-static int ANON_ALLOW = 1;
+static struct auth_user *USER_LIST = NULL; // Linked list of users
+static int ANON_ALLOW = 1; // Allow anonymous method (SOCKS_AUTH_NONE)
 
+/**
+ * Get current anonymous access state and, optionally, modify it
+ */
 int auth_anon_allow(int newstate)
 {
     int oldstate = ANON_ALLOW;
@@ -65,6 +80,9 @@ int auth_anon_allow(int newstate)
     return oldstate;
 }
 
+/**
+ * Add new user
+ */
 int auth_username_append(int method, const char *username, const char *secret, size_t secretlen)
 {
     struct auth_user *u;
@@ -92,11 +110,18 @@ int auth_username_append(int method, const char *username, const char *secret, s
     return 0;
 }
 
+/**
+ * Get username from opaque user pointer
+ */
 const char *auth_get_username(const void *auth)
 {
     return auth == NULL ? NULL : ((const struct auth_user *)auth)->username;
 }
 
+/**
+ * Parse auth file: detect prefix and pass the filespec tail to
+ * corresponding format parser
+ */
 void authfile_parse(const char *filespec)
 {
     const struct authfile_format *format;
@@ -116,6 +141,9 @@ void authfile_parse(const char *filespec)
     format->parse(fs);
 }
 
+/**
+ * Find a suitable method from client-provided offer
+ */
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen)
 {
     size_t i;
@@ -139,6 +167,9 @@ const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t of
  * METHOD STAGE FUNCTIONS START HERE *
  *************************************/
 
+/**
+ * AUTH METHOD: User/password authentication (RFC 1929)
+ */
 static int auth_method_basic(const char *peername, int stage, auth_context_t *ctxt)
 {
     const char *user, *pass, *cpass;
@@ -199,6 +230,10 @@ MALFORMED:
  * FILE FORMAT FUNCTIONS START HERE *
  ************************************/
 
+/**
+ * AUTH FILE FORMAT: Text file with lines containing colon-separated
+ * username and password hash (crypt(3)-compatible salted)
+ */
 static void authfile_format_password(const char *filespec)
 {
     FILE *f = fopen(filespec, "rt");
@@ -212,6 +247,7 @@ static void authfile_format_password(const char *filespec)
 #pragma GCC diagnostic pop
         exit(1);
     }
+    auth_anon_allow(0); // We disallow anonymous access if we have users
     while (fgets(line, sizeof(line), f) != NULL)
     {
         char *sp;

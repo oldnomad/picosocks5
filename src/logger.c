@@ -7,7 +7,7 @@
 #include "logger.h"
 
 static int LOGMODE = LOGGER_SYSLOG;
-static int VERBOSITY = LOG_DEBUG;
+static int VERBOSITY = LOG_NOTICE;
 
 void logger_init(int mode, int verbosity)
 {

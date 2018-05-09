@@ -16,12 +16,16 @@
 #include "socks5bits.h"
 
 typedef struct {
-    int socket;
-    const void *auth;
-    char peername[UTIL_ADDRSTRLEN];
-    char destname[UTIL_ADDRSTRLEN];
+    int socket;                     // Client socket
+    const void *auth;               // Authenticated user (if any)
+    char peername[UTIL_ADDRSTRLEN]; // Client's socket name
+    char destname[UTIL_ADDRSTRLEN]; // Server's socket name
 } socks_state_t;
 
+/**
+ * Negotiate authentication method and perform corresponding
+ * sub-negotiation stages
+ */
 static int socks_negotiate_method(socks_state_t *conn)
 {
     unsigned char buffer[1024]; // Is it enough for most sub-negotiations?
@@ -35,13 +39,13 @@ static int socks_negotiate_method(socks_state_t *conn)
         if (len < 0)
             logger(LOG_WARNING, "<%s> Error receiving initial offer: %m",
                 conn->peername);
-        return -1; // Failed to receive initial offer
+        return -1;
     }
     if (len < 3 || buffer[0] != SOCKS_VERSION5 || buffer[1] == 0 || (buffer[1] + 2) > len)
     {
         logger(LOG_WARNING, "<%s> Malformed initial offer",
             conn->peername);
-        return -1; // Malformed offer
+        return -1;
     }
     method = auth_negotiate_method(&buffer[2], buffer[1]);
     buffer[0] = SOCKS_VERSION5;
@@ -50,7 +54,7 @@ static int socks_negotiate_method(socks_state_t *conn)
     {
         logger(LOG_WARNING, "<%s> Error sending initial offer: %m",
             conn->peername);
-        return -1; // Failed to send initial offer
+        return -1;
     }
     if (method == NULL)
     {
@@ -71,7 +75,7 @@ static int socks_negotiate_method(socks_state_t *conn)
             if (len < 0)
                 logger(LOG_WARNING, "<%s> Error receiving auth packet: %m",
                     conn->peername);
-            return -1; // Failed to receive auth packet
+            return -1;
         }
         ctxt.challenge = buffer;
         ctxt.challenge_length = len;
@@ -85,7 +89,7 @@ static int socks_negotiate_method(socks_state_t *conn)
             {
                 logger(LOG_WARNING, "<%s> Error sending auth response: %m",
                     conn->peername);
-                return -1; // Failed to send auth response
+                return -1;
             }
         }
         if (ret == 0)
@@ -104,6 +108,9 @@ static int socks_negotiate_method(socks_state_t *conn)
     return 0;
 }
 
+/**
+ * Errno code to SOCKS5 reply code
+ */
 static int socks_errno2reply(int err)
 {
     switch (err)
@@ -129,6 +136,9 @@ static int socks_errno2reply(int err)
     }
 }
 
+/**
+ * Process SOCKS5 request
+ */
 static int socks_process_request(socks_state_t *conn)
 {
     unsigned char buffer[256 + 6];
@@ -141,13 +151,13 @@ static int socks_process_request(socks_state_t *conn)
         if (len < 0)
             logger(LOG_WARNING, "<%s> Error receiving request: %m",
                 conn->peername);
-        return -1; // Failed to receive request
+        return -1;
     }
     if (len < 6 || buffer[0] != SOCKS_VERSION5 || buffer[2] != 0x00)
     {
         logger(LOG_WARNING, "<%s> Malformed request: [%d] %02x %02x %02x %02x",
             conn->peername, len, buffer[0], buffer[1], buffer[2], buffer[3]);
-        return -1; // Malformed request
+        return -1;
     }
     switch (buffer[3]) // ATYP
     {
@@ -161,7 +171,7 @@ static int socks_process_request(socks_state_t *conn)
         {
             logger(LOG_WARNING, "<%s> Malformed request (IPv4 len %d)",
                 conn->peername, len);
-            return -1; // Malformed request: not enough data for IPv4 address
+            return -1; // Not enough data for IPv4 address
         }
         dst.ss_family = AF_INET;
         memcpy(&((struct sockaddr_in *)&dst)->sin_addr.s_addr, &buffer[4], 4);
@@ -172,7 +182,7 @@ static int socks_process_request(socks_state_t *conn)
         {
             logger(LOG_WARNING, "<%s> Malformed request (domain len %d/%d)",
                 conn->peername, len, buffer[4]);
-            return -1; // Malformed request: Not enough data for domain name
+            return -1; // Not enough data for domain name
         }
         {
             static const struct addrinfo hints = {
@@ -209,7 +219,7 @@ static int socks_process_request(socks_state_t *conn)
         {
             logger(LOG_WARNING, "<%s> Malformed request (IPv6 len %d)",
                 conn->peername, len);
-            return -1; // Malformed request: Not enough data for IPv6 address
+            return -1; // Not enough data for IPv6 address
         }
         dst.ss_family = AF_INET6;
         memcpy(&((struct sockaddr_in6 *)&dst)->sin6_addr.s6_addr, &buffer[4], 16);
@@ -219,6 +229,8 @@ static int socks_process_request(socks_state_t *conn)
     util_decode_addr((struct sockaddr *)&dst, sizeof(dst), conn->destname, sizeof(conn->destname));
     switch (buffer[1]) // CMD
     {
+    case SOCKS_CMD_BIND:
+    case SOCKS_CMD_ASSOCIATE:
     default:
         // NOTE: BIND and UDP ASSOCIATE/BIND are not implemented yet
         logger(LOG_NOTICE, "<%s> Unknown command 0x%02X",
@@ -255,7 +267,10 @@ ON_ERROR:
     buffer[2] = 0x00;
     switch (out.ss_family)
     {
-    default: // Unspecified AF, lazily use original address
+    default:
+        // Unspecified AF, lazily use original address.
+        // In strict accordance with RFC 1928 we should send
+        // our own address, but nobody cares anyway.
         break;
     case AF_INET:
         buffer[3] = SOCKS_ADDR_IPV4;
@@ -274,7 +289,7 @@ ON_ERROR:
     {
         logger(LOG_WARNING, "<%s> Error sending reply: %m",
             conn->peername);
-        return -1; // Failed to send reply
+        return -1;
     }
     if (errcode != SOCKS_ERR_SUCCESS)
         return -1;
@@ -364,6 +379,9 @@ ON_ERROR:
     return 0;
 }
 
+/**
+ * Thread function for client connection
+ */
 static void *socks_connection_thread(void *arg)
 {
     socks_state_t conn = {
@@ -387,6 +405,9 @@ static void *socks_connection_thread(void *arg)
     return NULL;
 }
 
+/**
+ * Listen at all addresses of given host, return parameters for select(3)
+ */
 int socks_listen_at(const char *host, const char *service, fd_set *fds)
 {
     int ret, nfds = 0;
@@ -438,6 +459,9 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
     return nfds;
 }
 
+/**
+ * Accept incoming connections on all listened addresses
+ */
 void socks_accept_loop(int nfds, const fd_set *fds)
 {
     pthread_attr_t thr_attr;

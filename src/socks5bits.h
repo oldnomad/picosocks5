@@ -1,9 +1,9 @@
-/*
+/**
  * SOCKS5 version byte
  */
 #define SOCKS_VERSION5 0x05
 
-/*
+/**
  * Authentication methods
  */
 enum {
@@ -13,7 +13,7 @@ enum {
     SOCKS_AUTH_INVALID  = 0xFF, // Negotiations failed
 };
 
-/*
+/**
  * Address types
  */
 enum {
@@ -21,7 +21,8 @@ enum {
     SOCKS_ADDR_DOMAIN   = 0x03, // Domain name
     SOCKS_ADDR_IPV6     = 0x04, // IPv6 address
 };
-/*
+
+/**
  * Request commands
  */
 enum {
@@ -29,7 +30,8 @@ enum {
     SOCKS_CMD_BIND      = 0x02, // Bind reverse TCP channel
     SOCKS_CMD_ASSOCIATE = 0x03, // Associate UDP channel
 };
-/*
+
+/**
  * Reply codes
  */
 enum {

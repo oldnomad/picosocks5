@@ -114,9 +114,6 @@ static const char AUTHFILE_DESC[] =
     "        support SHA-256 (prefix \"$5$\"), SHA-512 (prefix \"$6$\"),\n"
     "        and, in some distributions, Blowfish (prefix \"$2a$\").\n";
 
-/**
- * Help message.
- */
 static void usage(const char *bin_name)
 {
     printf("Usage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
@@ -145,8 +142,8 @@ int main(int argc, char **argv)
         case 1000: // --nofork
             nofork = 1;
             break;
-        case 1001: // --stderr [<verbosity>]
-        case 1002: // --stderr-copy [<verbosity>]
+        case 1001: // --stderr=[<verbosity>]
+        case 1002: // --stderr-copy=[<verbosity>]
             if (optarg != NULL)
             {
                 char *ep = NULL;
@@ -163,17 +160,17 @@ int main(int argc, char **argv)
             if (opt == 1002)
                 logmode |= LOGGER_SYSLOG;
             break;
-        case 'a': // --auth [<format>:]<secrets-file>
+        case 'a': // --auth=[<format>:]<secrets-file>
             authfile_parse(optarg);
             break;
-        case 'u': // --user <uid>
+        case 'u': // --user=<uid>
             if ((drop_uid = util_parse_user(optarg)) == (uid_t)-1)
             {
                 fprintf(stderr, "Cannot find user '%s'\n", optarg);
                 exit(1);
             }
             break;
-        case 'g': // --group <gid>
+        case 'g': // --group=<gid>
             if ((drop_gid = util_parse_group(optarg)) == (gid_t)-1)
             {
                 fprintf(stderr, "Cannot find group '%s'\n", optarg);
@@ -203,6 +200,7 @@ int main(int argc, char **argv)
             char *sp = strrchr(arg, ':');
             if (sp != NULL)
             {
+                // We modify argv; that's not pretty, but allowed
                 *sp++ = '\0';
                 listen_service = sp;
             }
