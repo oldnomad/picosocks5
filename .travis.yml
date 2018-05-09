@@ -10,6 +10,7 @@ env:
 
 addons:
   coverity_scan:
-    project: "oldnomad/picosocks5"
+    project:
+      name: "oldnomad/picosocks5"
     build_command_prepend: autoreconf -f -i && ./configure
     build_command: make
