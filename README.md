@@ -1,4 +1,6 @@
-# What is it?
+# PicoSOCKS5: a lightweight and simple SOCKS5 proxy server
+[![Build Status](https://travis-ci.com/oldnomad/picosocks5.svg?branch=master)](https://travis-ci.com/oldnomad/picosocks5)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/15727/badge.svg)](https://scan.coverity.com/projects/15727)
 
 PicoSOCKS5 is a SOCKS5 proxy cobbled together in less than 5 days of lazy coding.
 It is written in pure C and uses no extra libraries besides GLibC. Within GLibC
