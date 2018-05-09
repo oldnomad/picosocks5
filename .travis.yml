@@ -2,9 +2,7 @@ language: c
 os: linux
 dist: trusty
 compiler: gcc
-
-before_install:
-  - autoreconf -f -i
+script: autoreconf -f -i && ./configure && make
 
 addons:
   apt:
