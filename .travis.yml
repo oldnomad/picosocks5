@@ -5,7 +5,7 @@ compiler: gcc
 script: autoreconf -f -i && ./configure && make
 
 addons:
-  apt:
-    coverity_scan:
-      project: "oldnomad/picosocks5"
-      build_command: "make"
+  coverity_scan:
+    project: "oldnomad/picosocks5"
+    build_command_prepend: autoreconf -f -i && ./configure
+    build_command: make
