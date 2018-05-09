@@ -6,7 +6,8 @@ It is written in pure C and uses no extra libraries besides GLibC. Within GLibC
 it uses only following GNU extensions to POSIX.1-2017 + XSI:
 
 - vsyslog(3).
-- Format specifier "%m" in printf.
+- getopt_long(3).
+- Format specifier "%m" in printf(3) family.
 
 # License
 
