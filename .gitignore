@@ -1,0 +1,13 @@
+autom4te.cache/
+autoscan.log
+configure.scan
+config.h
+config.log
+config.status
+stamp-h1
+Makefile
+src/Makefile
+src/*.o
+src/.deps
+src/picosocks5
+config.h.in~
