@@ -206,7 +206,10 @@ static void authfile_format_password(const char *filespec)
 
     if (f == NULL)
     {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
         fprintf(stderr, "Cannot open auth file '%s': %m\n", filespec);
+#pragma GCC diagnostic pop
         exit(1);
     }
     while (fgets(line, sizeof(line), f) != NULL)
