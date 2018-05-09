@@ -56,45 +56,72 @@ static void daemonize(uid_t uid, gid_t gid)
         setuid(uid);
 }
 
+
+static const char SHORT_OPTS[] = "a:u:g:h";
+static const struct option LONG_OPTS[] = {
+    { "nofork",      0, NULL, 1000 },
+    { "stderr",      2, NULL, 1001 },
+    { "stderr-copy", 2, NULL, 1002 },
+    { "auth",        1, NULL, 'a'  },
+    { "user",        1, NULL, 'u'  },
+    { "group",       1, NULL, 'g'  },
+    { "help",        0, NULL, 'h'  },
+    { NULL }
+};
+static const char OPTIONS_DESC[] =
+    "Options:\n\n"
+    "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
+    "        Secrets file for authentication. If format is not specified,\n"
+    "        \"password\" is implied. See below about formats.\n\n"
+    "    -u <user>, --user=<user>\n"
+    "    -g <group>, --group=<group>\n"
+    "        Specify non-privileged user and group to use for\n"
+    "        daemon execution; buth <user> and <group> can be\n"
+    "        specified either as names, or as numeric values,\n"
+    "        decimal, octal, or hexadecimal.\n\n"
+    "    --nofork\n"
+    "        Do not fork the daemon to background. Implies --stderr.\n\n"
+    "        Note that the daemon won't fork if its parent\n"
+    "        is init process (PID 1).\n\n"
+    "    --stderr[=<level>]\n"
+    "    --stderr-copy[=<level>]\n"
+    "        Output messages normally logged via syslog to stderr.\n"
+    "        Option --stderr-copy makes messages being logged both\n"
+    "        to stderr and via syslog, while --stderr suppresses\n"
+    "        syslog logging. Both options imply --no-fork.\n\n"
+    "        Optional numeric parameter specifies maximum verbosity\n"
+    "        level for messages (3-7, corresponding to syslog\n"
+    "        priorities). Default verbosity level is 5 (notice).\n\n"
+    "    -h, --help\n"
+    "        Print usage information and exit.\n";
+static const char ARG_DESC[] =
+    "Listen address can be specified as a literal address (IPv4 or\n"
+    "IPv6), or a host name. Listen address \"*\" means listening on\n"
+    "all available interfaces.\n\n"
+    "Listen port can be specified as a literal port number, or a\n"
+    "service name.\n\n"
+    "By default \"*:1080\" is used.\n";
+static const char AUTHFILE_DESC[] =
+    "Authentication file formats:\n\n"
+    "    password\n"
+    "        File is a text file, each line containing user name and\n"
+    "        password hash separated by semicolon (':'). No empty lines\n"
+    "        or comments are allowed.\n\n"
+    "        Password hash can be any type of salted hash supported by\n"
+    "        your GLibC version (see man 3 crypt). All versions of GLibC\n"
+    "        support MD5-crypt (prefix \"$1$\"), as produced, for example,\n"
+    "        by command \"openssl passwd -1\". Recent GLibC versions also\n"
+    "        support SHA-256 (prefix \"$5$\"), SHA-512 (prefix \"$6$\"),\n"
+    "        and, in some distributions, Blowfish (prefix \"2a\").\n";
+
 /**
  * Help message.
  */
 static void usage(const char *bin_name)
 {
     printf("Usage: %s [<option>...] [<listen-address>:<listen-port>]]\n\n"
-           "Listen address can be specified as a literal address (IPv4 or\n"
-           "IPv6), or a host name. Listen address \"*\" means listening on\n"
-           "all available interfaces.\n\n"
-           "Listen port can be specified as a literal port number, or a\n"
-           "service name.\n\n"
-           "By default \"*:1080\" is used.\n\n"
-           "Options:\n"
-           "    -a [<format>:]<secrets-file>, --auth [<format>:]<secrets-file>\n"
-           "        Secrets file for authentication. Currently only one\n"
-           "        file format \"password\" is supported, and it is the\n"
-           "        default.\n\n"
-           "    -u <user>, --user <user>\n"
-           "    -g <group>, --group <group>\n"
-           "        Specify non-privileged user and group to use for\n"
-           "        daemon execution; buth <user> and <group> can be\n"
-           "        specified either as names, or as numeric values,\n"
-           "        decimal, octal, or hexadecimal.\n\n"
-           "    --nofork\n"
-           "        Do not fork the daemon to background. Implies --stderr.\n\n"
-           "        Note that the daemon won't fork if its parent\n"
-           "        is init process (PID 1).\n\n"
-           "    --stderr [<level>]\n"
-           "    --stderr-copy [<level>]\n"
-           "        Output messages normally logged via syslog to stderr.\n"
-           "        Option --stderr-copy makes messages being logged both\n"
-           "        to stderr and via syslog, while --stderr suppresses\n"
-           "        syslog logging. Both options imply --no-fork.\n\n"
-           "        Optional numeric parameter specifies maximum verbosity\n"
-           "        level for messages (3-7, corresponding to syslog\n"
-           "        priorities). Default verbosity level is 5 (notice).\n\n"
-           "    -h, --help\n"
-           "        Print usage information and exit.\n",
-           bin_name);
+           "%s\n%s\n%s",
+           bin_name, ARG_DESC, OPTIONS_DESC, AUTHFILE_DESC);
     exit(2);
 }
 
@@ -108,19 +135,7 @@ int main(int argc, char **argv)
     int opt, nfds;
     fd_set fds;
 
-    static const char short_opts[] = "a:u:g:h";
-    static const struct option long_opts[] = {
-        { "nofork",      0, NULL, 1000 },
-        { "stderr",      2, NULL, 1001 },
-        { "stderr-copy", 2, NULL, 1002 },
-        { "auth",        1, NULL, 'a'  },
-        { "user",        1, NULL, 'u'  },
-        { "group",       1, NULL, 'g'  },
-        { "help",        0, NULL, 'h'  },
-        { NULL }
-    };
-
-    while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, SHORT_OPTS, LONG_OPTS, NULL)) != -1)
     {
         switch (opt)
         {

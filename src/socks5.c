@@ -59,7 +59,7 @@ static int socks_negotiate_method(socks_state_t *conn)
         return -1;
     }
     logger(LOG_DEBUG, "<%s> Negotiated authentication method 0x%02X",
-        conn->peername, method);
+        conn->peername, method->method);
     if (method->callback == NULL)
         return 0;
     // Now let's begin authentication sub-negotiation

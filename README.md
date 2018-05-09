@@ -7,6 +7,7 @@ it uses only following GNU extensions to POSIX.1-2017 + XSI:
 
 - vsyslog(3).
 - getopt_long(3).
+- crypt_r(3) and algorithm extensions for crypt(3) family.
 - Format specifier "%m" in printf(3) family.
 
 # License
@@ -23,8 +24,7 @@ of the project.
   implemented. Update [draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-pro-v5-05.txt)
   is not implemented.
 - PicoSOCKS5 implements username/password authentication for SOCKS5
-  ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)). Usernames and passwords for
-  authentication are read from a file in format compatible with Apache htpasswd.
+  ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
 - PicoSOCKS5 supports incoming and outgoing connections both in IPv4 and IPv6.
   In particular, it can accept requests to connect to IPv6 servers from IPv4 clients,
   and vice versa.
