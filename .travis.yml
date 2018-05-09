@@ -6,7 +6,7 @@ script: autoreconf -f -i && ./configure && make
 
 env:
   global:
-    - secure: "i11M4jStKZJTXFQl2dJ4hg"
+    - secure: ""
 
 addons:
   coverity_scan:
