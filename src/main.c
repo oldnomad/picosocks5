@@ -119,7 +119,7 @@ static const char AUTHFILE_DESC[] =
  */
 static void usage(const char *bin_name)
 {
-    printf("Usage: %s [<option>...] [<listen-address>:<listen-port>]]\n\n"
+    printf("Usage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
            "%s\n%s\n%s",
            bin_name, ARG_DESC, OPTIONS_DESC, AUTHFILE_DESC);
     exit(2);
