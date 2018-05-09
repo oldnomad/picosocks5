@@ -88,7 +88,7 @@ static const char OPTIONS_DESC[] =
     "        Output messages normally logged via syslog to stderr.\n"
     "        Option --stderr-copy makes messages being logged both\n"
     "        to stderr and via syslog, while --stderr suppresses\n"
-    "        syslog logging. Both options imply --no-fork.\n\n"
+    "        syslog logging. Both options imply --nofork.\n\n"
     "        Optional numeric parameter specifies maximum verbosity\n"
     "        level for messages (3-7, corresponding to syslog\n"
     "        priorities). Default verbosity level is 5 (notice).\n\n"
