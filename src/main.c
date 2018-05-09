@@ -158,6 +158,7 @@ int main(int argc, char **argv)
                 }
                 verbosity = lvl;
             }
+            nofork = 1;
             logmode = LOGGER_STDERR;
             if (opt == 1002)
                 logmode |= LOGGER_SYSLOG;
