@@ -112,7 +112,7 @@ static const char AUTHFILE_DESC[] =
     "        support MD5-crypt (prefix \"$1$\"), as produced, for example,\n"
     "        by command \"openssl passwd -1\". Recent GLibC versions also\n"
     "        support SHA-256 (prefix \"$5$\"), SHA-512 (prefix \"$6$\"),\n"
-    "        and, in some distributions, Blowfish (prefix \"2a\").\n";
+    "        and, in some distributions, Blowfish (prefix \"$2a$\").\n";
 
 /**
  * Help message.
