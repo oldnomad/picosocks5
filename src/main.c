@@ -6,10 +6,8 @@
 #include <string.h>
 #include <signal.h>
 #include <syslog.h>
-#include <pthread.h>
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <sys/select.h>
 #include <getopt.h>
 #include "socks5.h"
 #include "auth.h"
