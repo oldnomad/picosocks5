@@ -3,14 +3,3 @@ os: linux
 dist: trusty
 compiler: gcc
 script: autoreconf -f -i && ./configure && make
-
-env:
-  global:
-    - secure: ""
-
-addons:
-  coverity_scan:
-    project:
-      name: "oldnomad/picosocks5"
-    build_command_prepend: autoreconf -f -i && ./configure
-    build_command: make
