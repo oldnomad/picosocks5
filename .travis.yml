@@ -3,6 +3,9 @@ os: linux
 dist: trusty
 compiler: gcc
 
+before_install:
+  - autoreconf -f -i
+
 addons:
   apt:
     coverity_scan:
