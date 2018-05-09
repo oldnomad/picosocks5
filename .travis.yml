@@ -4,6 +4,10 @@ dist: trusty
 compiler: gcc
 script: autoreconf -f -i && ./configure && make
 
+env:
+  global:
+    - secure: "i11M4jStKZJTXFQl2dJ4hg"
+
 addons:
   coverity_scan:
     project: "oldnomad/picosocks5"
