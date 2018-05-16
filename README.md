@@ -10,6 +10,9 @@ it uses only following GNU extensions to POSIX.1-2017 + XSI:
 - crypt_r(3) and algorithm extensions for crypt(3) family.
 - Format specifier "%m" in printf(3) family.
 
+So if you have another POSIX-compliant C runtime library that includes these
+features, PicoSOCKS5 can be ported to it.
+
 # License
 
 PicoSOCKS5 is licensed under GNU Generat Public License Version 3 (GPLv3).
@@ -47,11 +50,31 @@ of the project.
 
 # Building PicoSOCKS5
 
+For building PicoSOCKS5 you'll need:
+
+- GCC compiler. Any version supporting C99 will do (v4.8.4 or newer is guaranteed to work).
+- GLibC or compatible library.
+- GNU Autoconf/Automake, and their dependencies. The project is build using automake version
+  1.15, but version 1.14 is also known to work (with reconfiguration, see below).
+
+First, get the latest sources and run configure:
+
 ```bash
 git clone https://github.com/oldnomad/picosocks5.git
 cd picosocks5
 ./configure
-make && make install
+```
+
+Now, if your version of automake if not 1.15, you'll have to reconfigure it:
+
+```bash
+autoreconf -f -i
+```
+
+Finally, build and install the daemon:
+
+```bash
+make && sudo make install
 ```
 
 # Using PicoSOCKS5
