@@ -124,7 +124,7 @@ static void usage(const char *bin_name)
 
 int main(int argc, char **argv)
 {
-    int nofork = 1, logmode = 0, verbosity = LOG_NOTICE;
+    int nofork = 0, logmode = 0, verbosity = LOG_NOTICE;
     gid_t drop_gid = -1;
     uid_t drop_uid = -1;
     const char *listen_host = NULL;
