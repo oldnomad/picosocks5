@@ -54,7 +54,7 @@ For building PicoSOCKS5 you'll need:
 
 - GCC compiler. Any version supporting C99 will do (v4.8.4 or newer is guaranteed to work).
 - GLibC or compatible library.
-- GNU Autoconf/Automake, and their dependencies. The project is build using automake version
+- GNU Autoconf/Automake, and their dependencies. The project is built using automake version
   1.15, but version 1.14 is also known to work (with reconfiguration, see below).
 
 First, get the latest sources and run configure:
@@ -65,7 +65,7 @@ cd picosocks5
 ./configure
 ```
 
-Now, if your version of automake if not 1.15, you'll have to reconfigure it:
+Now, if your version of automake is not 1.15, you'll have to reconfigure it:
 
 ```bash
 autoreconf -f -i
