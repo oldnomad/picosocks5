@@ -4816,7 +4816,7 @@ $as_echo "#define STRERROR_R_CHAR_P 1" >>confdefs.h
 
 fi
 
-for ac_func in dup2 memchr memmove select socket strchr strrchr strtoul
+for ac_func in dup2 memchr memmove select socket strcasecmp strchr strrchr strtoul
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"

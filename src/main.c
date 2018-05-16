@@ -57,11 +57,11 @@ static void daemonize(uid_t uid, gid_t gid)
 }
 
 
-static const char SHORT_OPTS[] = "a:u:g:h";
+static const char SHORT_OPTS[] = "a:u:g:L:v:h";
 static const struct option LONG_OPTS[] = {
     { "nofork",      0, NULL, 1000 },
-    { "stderr",      2, NULL, 1001 },
-    { "stderr-copy", 2, NULL, 1002 },
+    { "logmode",     1, NULL, 'L'  },
+    { "loglevel",    1, NULL, 'v'  },
     { "auth",        1, NULL, 'a'  },
     { "user",        1, NULL, 'u'  },
     { "group",       1, NULL, 'g'  },
@@ -69,32 +69,44 @@ static const struct option LONG_OPTS[] = {
     { NULL }
 };
 static const char OPTIONS_DESC[] =
+    //        1         2         3         4         5         7
+    //23456789012345678901234567890123456789012345678901234567890123567890
     "Options:\n\n"
     "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
-    "        Secrets file for authentication. If format is not specified,\n"
-    "        \"password\" is implied. See below about formats.\n\n"
+    "        Secrets file for authentication. If format is not\n"
+    "        explicitly specified, \"password\" is implied. See below\n"
+    "        about supported formats.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
-    "        Specify non-privileged user and group to use for\n"
-    "        daemon execution; buth <user> and <group> can be\n"
-    "        specified either as names, or as numeric values,\n"
-    "        decimal, octal, or hexadecimal.\n\n"
+    "        Specify non-privileged user and group to use for daemon\n"
+    "        execution; both <user> and <group> can be specified either\n"
+    "        as names, or as numeric values, decimal, octal, or\n"
+    "        hexadecimal (in C notation).\n\n"
     "    --nofork\n"
-    "        Do not fork the daemon to background. Implies --stderr.\n\n"
-    "        Note that the daemon won't fork if its parent\n"
-    "        is init process (PID 1).\n\n"
-    "    --stderr[=<level>]\n"
-    "    --stderr-copy[=<level>]\n"
-    "        Output messages normally logged via syslog to stderr.\n"
-    "        Option --stderr-copy makes messages being logged both\n"
-    "        to stderr and via syslog, while --stderr suppresses\n"
-    "        syslog logging. Both options imply --nofork.\n\n"
-    "        Optional numeric parameter specifies maximum verbosity\n"
-    "        level for messages (3-7, corresponding to syslog\n"
-    "        priorities). Default verbosity level is 5 (notice).\n\n"
+    "        Do not fork the daemon to background. This option also\n"
+    "        changes the default logging mode from \"syslog\" to \"stderr\".\n\n"
+    "        Note that the daemon won't fork if its parent is init\n"
+    "        process (PID 1).\n\n"
+    "    -L <mode>, --logmode=<mode>\n"
+    "        Specify logging mode. Supported modes are:\n"
+    "            syslog   - log to syslog (default unless --nofork);\n"
+    "            stderr   - log to stderr (implies --nofork);\n"
+    "            combined - log to both syslog and stderr (implies\n"
+    "                       --nofork).\n\n"
+    "    -v <level>, --loglevel=<level>\n"
+    "        Specify maximum logging verbosity level. Supported levels\n"
+    "        are:\n"
+    "            err      - only fatal errors;\n"
+    "            warn     - also protocol errors;\n"
+    "            notice   - also important protocol disruptions;\n"
+    "            info     - also informational messages (default);\n"
+    "            debug    - also debugging messages;\n"
+    "            none     - suppress logging completely.\n\n"
     "    -h, --help\n"
     "        Print usage information and exit.\n";
 static const char ARG_DESC[] =
+    //        1         2         3         4         5         7
+    //23456789012345678901234567890123456789012345678901234567890123567890
     "Listen address can be specified as a literal address (IPv4 or\n"
     "IPv6), or a host name. Listen address \"*\" means listening on\n"
     "all available interfaces.\n\n"
@@ -102,6 +114,8 @@ static const char ARG_DESC[] =
     "service name.\n\n"
     "By default \"*:1080\" is used.\n";
 static const char AUTHFILE_DESC[] =
+    //        1         2         3         4         5         7
+    //23456789012345678901234567890123456789012345678901234567890123567890
     "Authentication file formats:\n\n"
     "    password\n"
     "        File is a text file, each line containing user name and\n"
@@ -124,7 +138,7 @@ static void usage(const char *bin_name)
 
 int main(int argc, char **argv)
 {
-    int nofork = 0, logmode = 0, verbosity = LOG_NOTICE;
+    int nofork = 0, logmode = 0, loglevel = -1;
     gid_t drop_gid = -1;
     uid_t drop_uid = -1;
     const char *listen_host = NULL;
@@ -142,23 +156,21 @@ int main(int argc, char **argv)
         case 1000: // --nofork
             nofork = 1;
             break;
-        case 1001: // --stderr=[<verbosity>]
-        case 1002: // --stderr-copy=[<verbosity>]
-            if (optarg != NULL)
+        case 'L': // --logmode=<mode>
+            if ((logmode = logger_name2mode(optarg)) < 0)
             {
-                char *ep = NULL;
-                unsigned long lvl = strtoul(optarg, &ep, 10);
-                if (lvl < LOG_ERR || lvl > LOG_DEBUG || ep == NULL || *ep != '\0')
-                {
-                    fprintf(stderr, "Invalid verbosity level '%s'\n", optarg);
-                    exit(1);
-                }
-                verbosity = lvl;
+                fprintf(stderr, "Unknown logging mode '%s'\n", optarg);
+                exit(1);
             }
-            nofork = 1;
-            logmode = LOGGER_STDERR;
-            if (opt == 1002)
-                logmode |= LOGGER_SYSLOG;
+            if (logger_need_nofork(logmode))
+                nofork = 1;
+            break;
+        case 'v': // --loglevel=<level>
+            if ((loglevel = logger_name2level(optarg)) < 0)
+            {
+                fprintf(stderr, "Unknown logging level '%s'\n", optarg);
+                exit(1);
+            }
             break;
         case 'a': // --auth=[<format>:]<secrets-file>
             authfile_parse(optarg);
@@ -209,9 +221,7 @@ int main(int argc, char **argv)
             (listen_host[0] == '*' && listen_host[1] == '\0'))
             listen_host = NULL;
     }
-    if (nofork && logmode == 0)
-        logmode = LOGGER_STDERR;
-    logger_init(logmode, verbosity);
+    logger_init(nofork, logmode, loglevel);
     if ((nfds = socks_listen_at(listen_host, listen_service, &fds)) < 0)
         exit(1);
     if (nofork == 0)

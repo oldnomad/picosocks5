@@ -16,7 +16,7 @@ AC_TYPE_UINT16_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
-AC_CHECK_FUNCS([dup2 memchr memmove select socket strchr strrchr strtoul])
+AC_CHECK_FUNCS([dup2 memchr memmove select socket strcasecmp strchr strrchr strtoul])
 AC_CHECK_LIB(pthread, pthread_create)
 AC_CHECK_LIB(crypt, crypt_r)
 
