@@ -1,17 +1,8 @@
 # PicoSOCKS5: a lightweight and simple SOCKS5 proxy server
 [![Build Status](https://travis-ci.com/oldnomad/picosocks5.svg?branch=master)](https://travis-ci.com/oldnomad/picosocks5)
 
-PicoSOCKS5 is a SOCKS5 proxy cobbled together in less than 5 days of lazy coding.
-It is written in pure C and uses no extra libraries besides GLibC. Within GLibC
-it uses only following GNU extensions to POSIX.1-2017 + XSI:
-
-- vsyslog(3).
-- getopt_long(3).
-- crypt_r(3) and algorithm extensions for crypt(3) family.
-- Format specifier "%m" in printf(3) family.
-
-So if you have another POSIX-compliant C runtime library that includes these
-features, PicoSOCKS5 can be ported to it.
+PicoSOCKS5 is a SOCKS5 proxy server cobbled together in less than 5 days of lazy coding.
+It is written in pure C and uses no extra libraries besides GLibC.
 
 # License
 
@@ -53,7 +44,15 @@ of the project.
 For building PicoSOCKS5 you'll need:
 
 - GCC compiler. Any version supporting C99 will do (v4.8.4 or newer is guaranteed to work).
-- GLibC or compatible library.
+  PicoSOCKS5 conforms to C99 standard, so it can be ported to any compiler supporting it.
+- GLibC or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI extensions) and following
+  GNU extensions:
+  - vsyslog(3).
+  - getopt_long(3).
+  - crypt_r(3) and algorithm extensions for crypt(3) family.
+  - Format specifier "%m" in printf(3) family.
+  So if you have another POSIX-compliant C runtime library that includes these features,
+  PicoSOCKS5 can be ported to it.
 - GNU Autoconf/Automake, and their dependencies. The project is built using automake version
   1.15, but version 1.14 is also known to work (with reconfiguration, see below).
 
