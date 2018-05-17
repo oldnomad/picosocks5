@@ -47,10 +47,12 @@ For building PicoSOCKS5 you'll need:
   PicoSOCKS5 conforms to C99 standard, so it can be ported to any compiler supporting it.
 - GLibC or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI extensions) and following
   GNU extensions:
+
   - vsyslog(3).
   - getopt_long(3).
   - crypt_r(3) and algorithm extensions for crypt(3) family.
   - Format specifier "%m" in printf(3) family.
+
   So if you have another POSIX-compliant C runtime library that includes these features,
   PicoSOCKS5 can be ported to it.
 - GNU Autoconf/Automake, and their dependencies. The project is built using automake version
