@@ -16,10 +16,11 @@
 #include "socks5bits.h"
 
 typedef struct {
-    int socket;                     // Client socket
-    const void *auth;               // Authenticated user (if any)
-    char peername[UTIL_ADDRSTRLEN]; // Client's socket name
-    char destname[UTIL_ADDRSTRLEN]; // Server's socket name
+    int socket;                        // Client socket
+    const void *auth;                  // Authenticated user (if any)
+    struct sockaddr_storage localaddr; // Local address and port
+    char peername[UTIL_ADDRSTRLEN];    // Client's socket name
+    char destname[UTIL_ADDRSTRLEN];    // Server's socket name
 } socks_state_t;
 
 /**
@@ -143,7 +144,7 @@ static int socks_process_request(socks_state_t *conn)
 {
     unsigned char buffer[256 + 6];
     ssize_t len;
-    struct sockaddr_storage dst = { .ss_family = AF_UNSPEC }, out = { .ss_family = AF_UNSPEC };
+    struct sockaddr_storage dst = { .ss_family = AF_UNSPEC }, out = conn->localaddr;
     int errcode = SOCKS_ERR_SUCCESS, destfd = -1;
 
     if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
@@ -268,9 +269,11 @@ ON_ERROR:
     switch (out.ss_family)
     {
     default:
-        // Unspecified AF, lazily use original address.
-        // In strict accordance with RFC 1928 we should send
-        // our own address, but nobody cares anyway.
+        // We shouldn't be here, because 'out' is initialized
+        // from 'conn->localaddr'; anyway, let's just preserve
+        // the original address.
+        logger(LOG_WARNING, "<%s> Invalid AF in response address (internal error)",
+            conn->peername);
         break;
     case AF_INET:
         buffer[3] = SOCKS_ADDR_IPV4;
@@ -387,6 +390,7 @@ static void *socks_connection_thread(void *arg)
     socks_state_t conn = {
         .socket = (int)(intptr_t)arg,
         .auth = NULL,
+        .localaddr = { .ss_family = AF_UNSPEC },
         .peername = "",
         .destname = "",
     };
@@ -398,6 +402,8 @@ static void *socks_connection_thread(void *arg)
         if (getpeername(conn.socket, (struct sockaddr *)&addr, &addrlen) == 0)
             util_decode_addr((struct sockaddr *)&addr, addrlen,
                 conn.peername, sizeof(conn.peername));
+        addrlen = sizeof(conn.localaddr);
+        getsockname(conn.socket, (struct sockaddr *)&conn.localaddr, &addrlen);
     }
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
