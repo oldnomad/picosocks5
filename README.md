@@ -29,7 +29,7 @@ of the project.
   a deliberate denial-of-service attack.
 - There's no access control (any client can connect to any server).
 - User list for authentication is kept in memory, so PicoSOCKS5 doesn't work well for
-  really large user file.
+  really large number of users.
 - There's currently no support for more secure authentication methods, like GSS-API
   ([RFC 1961](https://www.ietf.org/rfc/rfc1961.txt)) or CHAP
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-chap-01.txt)). These
