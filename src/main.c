@@ -10,7 +10,8 @@
 #include <sys/socket.h>
 #include <getopt.h>
 #include "socks5.h"
-#include "auth.h"
+//#include "auth.h"
+#include "authfile.h"
 #include "logger.h"
 #include "util.h"
 

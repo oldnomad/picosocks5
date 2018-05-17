@@ -99,8 +99,10 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am_picosocks5_OBJECTS = main.$(OBJEXT) socks5.$(OBJEXT) auth.$(OBJEXT) \
-	logger.$(OBJEXT) util.$(OBJEXT)
+am_picosocks5_OBJECTS = main.$(OBJEXT) socks5.$(OBJEXT) \
+	logger.$(OBJEXT) util.$(OBJEXT) auth.$(OBJEXT) \
+	authuser.$(OBJEXT) auth-basic.$(OBJEXT) authfile.$(OBJEXT) \
+	authfile-password.$(OBJEXT)
 picosocks5_OBJECTS = $(am_picosocks5_OBJECTS)
 picosocks5_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -248,7 +250,10 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = -std=c99 -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
-picosocks5_SOURCES = main.c socks5.c auth.c logger.c util.c
+picosocks5_SOURCES = main.c socks5.c logger.c util.c \
+    auth.c authuser.c auth-basic.c \
+    authfile.c authfile-password.c
+
 all: all-am
 
 .SUFFIXES:
@@ -335,7 +340,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth-basic.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/authfile-password.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/authfile.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/authuser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socks5.Po@am__quote@
