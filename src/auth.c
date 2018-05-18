@@ -11,8 +11,9 @@
  * List of supported methods, in preference decreasing order
  */
 static const auth_method_t AUTH_METHODS[] = {
-    { SOCKS_AUTH_BASIC, auth_method_basic },
-    { SOCKS_AUTH_NONE,  NULL              } // Look, ma, no comma!
+    { SOCKS_AUTH_BASIC,   auth_method_basic },
+    { SOCKS_AUTH_NONE,    NULL              },
+    { SOCKS_AUTH_INVALID, NULL              }
 };
 
 /**
@@ -28,15 +29,14 @@ const char *auth_get_username(const void *auth)
  */
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen)
 {
-    size_t i;
+    const auth_method_t *m;
 
-    for (i = 0; i < sizeof(AUTH_METHODS)/sizeof(AUTH_METHODS[0]); i++)
+    for (m = AUTH_METHODS; m->method != SOCKS_AUTH_INVALID; m++)
     {
-        int method = AUTH_METHODS[i].method;
-        if (!authuser_method_allowed(method))
+        if (!authuser_method_allowed(m->method))
             continue;
-        if (memchr(offer, method, offerlen) != NULL)
-            return &AUTH_METHODS[i];
+        if (memchr(offer, m->method, offerlen) != NULL)
+            return m;
     }
     return NULL;
 }
