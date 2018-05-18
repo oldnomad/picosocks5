@@ -26,7 +26,6 @@ void authfile_format_password(const char *filespec)
 #pragma GCC diagnostic pop
         exit(1);
     }
-    authuser_anon_allow(0); // We disallow anonymous access if we have users
     while (fgets(line, sizeof(line), f) != NULL)
     {
         char *sp;

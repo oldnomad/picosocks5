@@ -16,7 +16,7 @@ struct authuser_container {
 
 static struct authuser_container
           *USER_LIST = NULL; // Linked list of users
-static int ANON_ALLOW = 1;   // Allow anonymous method (SOCKS_AUTH_NONE)
+static int ANON_ALLOW = 0;   // Allow anonymous method, even if there are non-anon users
 
 /**
  * Add new user
@@ -66,11 +66,11 @@ int authuser_method_allowed(int method)
 {
     struct authuser_container *u;
 
-    if (method == SOCKS_AUTH_NONE)
-        return ANON_ALLOW;
     for (u = USER_LIST; u != NULL; u = u->next)
         if (u->user.method == method)
             return 1;
+    if (method == SOCKS_AUTH_NONE && ANON_ALLOW)
+        return 1;
     return 0;
 }
 

@@ -10,8 +10,8 @@
 #include <sys/socket.h>
 #include <getopt.h>
 #include "socks5.h"
-//#include "auth.h"
 #include "authfile.h"
+#include "authuser.h"
 #include "logger.h"
 #include "util.h"
 
@@ -58,12 +58,13 @@ static void daemonize(uid_t uid, gid_t gid)
 }
 
 
-static const char SHORT_OPTS[] = "a:u:g:L:v:h";
+static const char SHORT_OPTS[] = "a:Au:g:L:v:h";
 static const struct option LONG_OPTS[] = {
     { "nofork",      0, NULL, 1000 },
     { "logmode",     1, NULL, 'L'  },
     { "loglevel",    1, NULL, 'v'  },
     { "auth",        1, NULL, 'a'  },
+    { "anonymous",   0, NULL, 'A'  },
     { "user",        1, NULL, 'u'  },
     { "group",       1, NULL, 'g'  },
     { "help",        0, NULL, 'h'  },
@@ -76,7 +77,13 @@ static const char OPTIONS_DESC[] =
     "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
     "        Secrets file for authentication. If format is not\n"
     "        explicitly specified, \"password\" is implied. See below\n"
-    "        about supported formats.\n\n"
+    "        about supported formats. Note that defining a secrets file\n"
+    "        with users available for non-anonymous authentication\n"
+    "        disables anonymous access, unless --anonymous is also\n"
+    "        specified.\n\n"
+    "    -A, --anonymous\n"
+    "        Allow anonymous access even if there is a non-anonymous\n"
+    "        method available.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
     "        Specify non-privileged user and group to use for daemon\n"
@@ -175,6 +182,9 @@ int main(int argc, char **argv)
             break;
         case 'a': // --auth=[<format>:]<secrets-file>
             authfile_parse(optarg);
+            break;
+        case 'A':
+            authuser_anon_allow(1);
             break;
         case 'u': // --user=<uid>
             if ((drop_uid = util_parse_user(optarg)) == (uid_t)-1)
