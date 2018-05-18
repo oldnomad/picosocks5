@@ -52,7 +52,7 @@ MALFORMED:
         if (cpass != NULL && strcmp(cpass, u->secret) == 0)
             break;
     }
-    ctxt->auth = u;
+    ctxt->username = u->username;
 
     if (ctxt->response_maxlen < 2)
     {

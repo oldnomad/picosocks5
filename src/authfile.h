@@ -7,8 +7,8 @@
 typedef void (*authfile_parser_t)(const char *filespec);
 
 typedef struct {
-    const char *prefix;
-    authfile_parser_t parse;
+    const char *prefix;      // Format prefix
+    authfile_parser_t parse; // Format parser function
 } authfile_format_t;
 
 void authfile_parse(const char *filespec);

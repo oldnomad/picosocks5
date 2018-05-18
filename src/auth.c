@@ -17,14 +17,6 @@ static const auth_method_t AUTH_METHODS[] = {
 };
 
 /**
- * Get username from opaque user pointer
- */
-const char *auth_get_username(const void *auth)
-{
-    return auth == NULL ? NULL : ((const authuser_t *)auth)->username;
-}
-
-/**
  * Find a suitable method from client-provided offer
  */
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen)

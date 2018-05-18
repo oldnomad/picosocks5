@@ -1,5 +1,4 @@
 typedef struct auth_user {
-    struct auth_user *next; // Pointer to next user
     int method;             // Auth method code
     const char *username;   // Username
     const char *secret;     // Secret (method-specific)

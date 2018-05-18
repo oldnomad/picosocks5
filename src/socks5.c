@@ -17,7 +17,8 @@
 
 typedef struct {
     int socket;                        // Client socket
-    const void *auth;                  // Authenticated user (if any)
+    const char *username;              // Authenticated user (if any)
+    void *authdata;                    // Additional malloc'ed data (if any)
     struct sockaddr_storage localaddr; // Local address and port
     char peername[UTIL_ADDRSTRLEN];    // Client's socket name
     char destname[UTIL_ADDRSTRLEN];    // Server's socket name
@@ -68,7 +69,8 @@ static int socks_negotiate_method(socks_state_t *conn)
     if (method->callback == NULL)
         return 0;
     // Now let's begin authentication sub-negotiation
-    ctxt.auth = NULL;
+    ctxt.username = NULL;
+    ctxt.authdata = NULL;
     for (stage = 0;; stage++)
     {
         if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
@@ -102,10 +104,11 @@ static int socks_negotiate_method(socks_state_t *conn)
             return -1;
         }
     }
-    if (ctxt.auth != NULL)
+    if (ctxt.username != NULL)
         logger(LOG_DEBUG, "<%s> Authenticated as user '%s'",
-            conn->peername, auth_get_username(ctxt.auth));
-    conn->auth = ctxt.auth;
+            conn->peername, ctxt.username);
+    conn->username = ctxt.username;
+    conn->authdata = ctxt.authdata;
     return 0;
 }
 
@@ -389,7 +392,8 @@ static void *socks_connection_thread(void *arg)
 {
     socks_state_t conn = {
         .socket = (int)(intptr_t)arg,
-        .auth = NULL,
+        .username = NULL,
+        .authdata = NULL,
         .localaddr = { .ss_family = AF_UNSPEC },
         .peername = "",
         .destname = "",
@@ -408,6 +412,8 @@ static void *socks_connection_thread(void *arg)
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
     close(conn.socket);
+    if (conn.authdata != NULL)
+        free(conn.authdata);
     return NULL;
 }
 
