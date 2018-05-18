@@ -9,9 +9,7 @@ AC_CONFIG_FILES([
 AC_PROG_CC
 AC_PROG_CC_C99
 AC_PROG_INSTALL
-if test x"$ac_cv_prog_cc_c99" = x"no"; then
-    AC_MSG_ERROR([compiler must support C99 standard])
-fi
+AS_IF([test "x$ac_cv_prog_cc_c99" = xno], [AC_MSG_ERROR([compiler must support C99 standard])])
 
 AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h unistd.h sys/socket.h])
 AC_TYPE_SIZE_T

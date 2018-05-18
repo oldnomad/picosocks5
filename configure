@@ -4135,8 +4135,8 @@ fi
 
 
 
-if test x"$ac_cv_prog_cc_c99" = x"no"; then
-    as_fn_error $? "compiler must support C99 standard" "$LINENO" 5
+if test "x$ac_cv_prog_cc_c99" = xno; then :
+  as_fn_error $? "compiler must support C99 standard" "$LINENO" 5
 fi
 
 
