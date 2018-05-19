@@ -69,7 +69,7 @@ int authuser_method_allowed(int method)
     for (u = USER_LIST; u != NULL; u = u->next)
         if (u->user.method == method)
             return 1;
-    if (method == SOCKS_AUTH_NONE && ANON_ALLOW)
+    if (method == SOCKS_AUTH_NONE && (USER_LIST == NULL || ANON_ALLOW))
         return 1;
     return 0;
 }
