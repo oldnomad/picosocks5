@@ -40,35 +40,27 @@ static void socks_logger_prefix(socks_state_t *conn, const char *state)
     *ep = '\0';
     if (conn->client.ss_family != AF_UNSPEC)
     {
-        if (elen < UTIL_ADDRSTRLEN)
+        if (elen < (UTIL_ADDRSTRLEN + 1))
             return;
         util_decode_addr((struct sockaddr *)&conn->client, sizeof(conn->client),
                          ep, elen);
         len = strlen(ep);
         ep   += len;
-        elen -= len;
-        if (elen < 4)
-            return;
-        *ep++ = ' ';
         *ep++ = '|';
-        *ep++ = ' ';
-        elen -= 3;
+        *ep   = '\0';
+        elen -= len + 1;
     }
     if (conn->server.ss_family != AF_UNSPEC)
     {
-        if (elen < UTIL_ADDRSTRLEN)
+        if (elen < (UTIL_ADDRSTRLEN + 1))
             return;
         util_decode_addr((struct sockaddr *)&conn->server, sizeof(conn->server),
                          ep, elen);
         len = strlen(ep);
         ep   += len;
-        elen -= len;
-        if (elen < 4)
-            return;
-        *ep++ = ' ';
         *ep++ = '|';
-        *ep++ = ' ';
-        elen -= 3;
+        *ep   = '\0';
+        elen -= len + 1;
     }
     len = strlen(state);
     if (elen <= len)
