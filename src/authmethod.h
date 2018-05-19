@@ -18,4 +18,4 @@
  * - Declare below a callback function with signature fitting auth_callback_t.
  * - Go to auth.c and insert an element into AUTH_METHODS[] array.
  */
-int auth_method_basic(const char *peername, int stage, auth_context_t *ctxt);
+int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt);

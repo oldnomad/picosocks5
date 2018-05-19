@@ -16,13 +16,94 @@
 #include "socks5bits.h"
 
 typedef struct {
-    int socket;                        // Client socket
-    const char *username;              // Authenticated user (if any)
-    void *authdata;                    // Additional malloc'ed data (if any)
-    struct sockaddr_storage localaddr; // Local address and port
-    char peername[UTIL_ADDRSTRLEN];    // Client's socket name
-    char destname[UTIL_ADDRSTRLEN];    // Server's socket name
+    int socket;                     // Client socket
+
+    const char *username;           // Authenticated user (if any)
+    void *authdata;                 // Additional malloc'ed data (if any)
+
+    struct sockaddr_storage local;  // Local address and port
+    struct sockaddr_storage client; // Client address and port
+    struct sockaddr_storage server; // Destination server address and port
+    char logprefix[256];            // Prefix for log messages
+
+    unsigned char buffer[4096];     // I/O buffer
 } socks_state_t;
+
+/**
+ * Build prefix for SOCKS log messages
+ */
+static void socks_logger_prefix(socks_state_t *conn, const char *state)
+{
+    char *ep = conn->logprefix;
+    size_t elen = sizeof(conn->logprefix), len;
+
+    *ep = '\0';
+    if (conn->client.ss_family != AF_UNSPEC)
+    {
+        if (elen < UTIL_ADDRSTRLEN)
+            return;
+        util_decode_addr((struct sockaddr *)&conn->client, sizeof(conn->client),
+                         ep, elen);
+        len = strlen(ep);
+        ep   += len;
+        elen -= len;
+        if (elen < 4)
+            return;
+        *ep++ = ' ';
+        *ep++ = '|';
+        *ep++ = ' ';
+        elen -= 3;
+    }
+    if (conn->server.ss_family != AF_UNSPEC)
+    {
+        if (elen < UTIL_ADDRSTRLEN)
+            return;
+        util_decode_addr((struct sockaddr *)&conn->server, sizeof(conn->server),
+                         ep, elen);
+        len = strlen(ep);
+        ep   += len;
+        elen -= len;
+        if (elen < 4)
+            return;
+        *ep++ = ' ';
+        *ep++ = '|';
+        *ep++ = ' ';
+        elen -= 3;
+    }
+    len = strlen(state);
+    if (elen <= len)
+        return;
+    strcpy(ep, state);
+}
+
+/**
+ * Read from SOCKS control channel
+ */
+static ssize_t socks_read(const socks_state_t *conn, unsigned char *buffer, size_t bufsize)
+{
+    ssize_t len;
+
+    if ((len = recv(conn->socket, buffer, bufsize, 0)) <= 0)
+    {
+        if (len < 0)
+            logger(LOG_WARNING, "<%s> Error receiving data from client: %m", conn->logprefix);
+        return -1;
+    }
+    return len;
+}
+
+/**
+ * Write to SOCKS control channel
+ */
+static int socks_write(const socks_state_t *conn, const unsigned char *data, size_t length)
+{
+    if (send(conn->socket, data, length, 0) == -1)
+    {
+        logger(LOG_WARNING, "<%s> Error sending data to client: %m", conn->logprefix);
+        return -1;
+    }
+    return 0;
+}
 
 /**
  * Negotiate authentication method and perform corresponding
@@ -30,83 +111,63 @@ typedef struct {
  */
 static int socks_negotiate_method(socks_state_t *conn)
 {
-    unsigned char buffer[1024]; // Is it enough for most sub-negotiations?
     ssize_t len;
     int ret, stage;
     const auth_method_t *method;
     auth_context_t ctxt;
 
-    if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
+    socks_logger_prefix(conn, "OFFER");
+    if ((len = socks_read(conn, conn->buffer, sizeof(conn->buffer))) < 0)
+        return -1;
+    if (len < 3 || conn->buffer[0] != SOCKS_VERSION5 ||
+        conn->buffer[1] == 0 || (conn->buffer[1] + 2) > len)
     {
-        if (len < 0)
-            logger(LOG_WARNING, "<%s> Error receiving initial offer: %m",
-                conn->peername);
+        logger(LOG_WARNING, "<%s> Malformed initial offer", conn->logprefix);
         return -1;
     }
-    if (len < 3 || buffer[0] != SOCKS_VERSION5 || buffer[1] == 0 || (buffer[1] + 2) > len)
-    {
-        logger(LOG_WARNING, "<%s> Malformed initial offer",
-            conn->peername);
+    method = auth_negotiate_method(&conn->buffer[2], conn->buffer[1]);
+    conn->buffer[0] = SOCKS_VERSION5;
+    conn->buffer[1] = method == NULL ? SOCKS_AUTH_INVALID : method->method;
+    if (socks_write(conn, conn->buffer, 2) < 0)
         return -1;
-    }
-    method = auth_negotiate_method(&buffer[2], buffer[1]);
-    buffer[0] = SOCKS_VERSION5;
-    buffer[1] = method == NULL ? SOCKS_AUTH_INVALID : method->method;
-    if (send(conn->socket, buffer, 2, 0) == -1)
-    {
-        logger(LOG_WARNING, "<%s> Error sending initial offer: %m",
-            conn->peername);
-        return -1;
-    }
     if (method == NULL)
     {
-        logger(LOG_NOTICE, "<%s> No authentication method available",
-            conn->peername);
+        logger(LOG_NOTICE, "<%s> No authentication method available", conn->logprefix);
         return -1;
     }
-    logger(LOG_DEBUG, "<%s> Negotiated authentication method 0x%02X",
-        conn->peername, method->method);
+    logger(LOG_DEBUG, "<%s> Negotiated authentication method 0x%02X", conn->logprefix,
+        method->method);
     if (method->callback == NULL)
         return 0;
+
     // Now let's begin authentication sub-negotiation
+    socks_logger_prefix(conn, "AUTH");
     ctxt.username = NULL;
     ctxt.authdata = NULL;
     for (stage = 0;; stage++)
     {
-        if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
-        {
-            if (len < 0)
-                logger(LOG_WARNING, "<%s> Error receiving auth packet: %m",
-                    conn->peername);
+        if ((len = socks_read(conn, conn->buffer, sizeof(conn->buffer))) < 0)
             return -1;
-        }
-        ctxt.challenge = buffer;
+        ctxt.challenge = conn->buffer;
         ctxt.challenge_length = len;
-        ctxt.response = buffer;
-        ctxt.response_maxlen = sizeof(buffer);
+        ctxt.response = conn->buffer;
+        ctxt.response_maxlen = sizeof(conn->buffer);
         ctxt.response_length = 0;
-        ret = method->callback(conn->peername, stage, &ctxt);
-        if (ctxt.response_length > 0)
-        {
-            if (send(conn->socket, buffer, ctxt.response_length, 0) == -1)
-            {
-                logger(LOG_WARNING, "<%s> Error sending auth response: %m",
-                    conn->peername);
-                return -1;
-            }
-        }
+        ret = method->callback(conn->logprefix, stage, &ctxt);
+        if (ctxt.response_length > 0 &&
+            socks_write(conn, ctxt.response, ctxt.response_length) < 0)
+            return -1;
         if (ret == 0)
             break;
         if (ret < 0)
         {
-            logger(LOG_WARNING, "<%s> Authentication failed",
-                conn->peername);
+            logger(LOG_WARNING, "<%s> Authentication failed", conn->logprefix);
             return -1;
         }
     }
     if (ctxt.username != NULL)
-        logger(LOG_DEBUG, "<%s> Authenticated as user '%s'",
-            conn->peername, ctxt.username);
+        logger(LOG_DEBUG, "<%s> Authenticated as user '%s'", conn->logprefix,
+            ctxt.username);
     conn->username = ctxt.username;
     conn->authdata = ctxt.authdata;
     return 0;
@@ -141,247 +202,243 @@ static int socks_errno2reply(int err)
 }
 
 /**
+ * Resolve domain name
+ */
+static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dlen, const void *pnum,
+                         struct sockaddr_storage *dst)
+{
+    static const struct addrinfo hints = {
+        .ai_flags = AI_ADDRCONFIG,
+    };
+    char hostname[256], serv[16];
+    uint16_t port;
+    struct addrinfo *list;
+    int ret;
+
+    if (dlen >= sizeof(hostname))
+    {
+        logger(LOG_ERR, "<%s> FATAL: Domain length (%d) exceeds maximum (%d)", conn->logprefix,
+            dlen, sizeof(hostname));
+        exit(1);
+    }
+    memcpy(hostname, dname, dlen);
+    hostname[dlen] = '\0';
+    memcpy(&port, pnum, 2);
+    snprintf(serv, sizeof(serv), "%u", ntohs(port)); // Yes, I know, that's stupid...
+    if ((ret = getaddrinfo(hostname, serv, &hints, &list)) != 0)
+    {
+        logger(LOG_NOTICE, "<%s> Failed to resolve domain '%s': %s", conn->logprefix,
+            hostname, gai_strerror(ret));
+        return SOCKS_ERR_ADDR_INVALID;
+    }
+    if (list->ai_addrlen > sizeof(*dst))
+    {
+        logger(LOG_ERR, "<%s> FATAL: Address length (%d) exceeds maximum (%d) for domain '%s'",
+            conn->logprefix, list->ai_addrlen, sizeof(*dst), hostname);
+        exit(1);
+    }
+    memcpy(dst, list->ai_addr, list->ai_addrlen);
+    freeaddrinfo(list);
+    return 0;
+}
+
+/**
+ * Copy data to/from destination
+ */
+static void socks_process_data(socks_state_t *conn, int destfd)
+{
+    fd_set rfds, efds;
+    int nfds, ret;
+    ssize_t len;
+
+    socks_logger_prefix(conn, "DATA");
+    for (;;)
+    {
+        FD_ZERO(&rfds);
+        FD_SET(conn->socket, &rfds);
+        FD_SET(destfd, &rfds);
+        nfds = (conn->socket > destfd ? conn->socket : destfd) + 1;
+        efds = rfds;
+        if ((ret = select(nfds, &rfds, NULL, &efds, NULL)) == -1)
+        {
+            logger(LOG_WARNING, "<%s> Error while waiting: %m", conn->logprefix);
+            break;
+        }
+        if (ret == 0)
+            continue;
+        if (FD_ISSET(conn->socket, &rfds))
+        {
+            if ((len = socks_read(conn, conn->buffer, sizeof(conn->buffer))) < 0)
+                break;
+            if (send(destfd, conn->buffer, len, 0) == -1)
+            {
+                logger(LOG_WARNING, "<%s> Error writing to server: %m", conn->logprefix);
+                break;
+            }
+            continue;
+        }
+        if (FD_ISSET(destfd, &rfds))
+        {
+            if ((len = recv(destfd, conn->buffer, sizeof(conn->buffer), 0)) <= 0)
+            {
+                if (len < 0)
+                    logger(LOG_WARNING, "<%s> Error reading from server: %m", conn->logprefix);
+                break;
+            }
+            if (socks_write(conn, conn->buffer, len) < 0)
+                break;
+            continue;
+        }
+        if (FD_ISSET(conn->socket, &efds))
+        {
+            int err = 0;
+            socklen_t errlen = sizeof(err);
+            char errbuf[256] = "";
+
+            getsockopt(conn->socket, SOL_SOCKET, SO_ERROR, &err, &errlen);
+            strerror_r(err, errbuf, sizeof(errbuf));
+            logger(LOG_WARNING, "<%s> Client socket error: [%d] %s", conn->logprefix,
+                err, errbuf);
+            continue;
+        }
+        if (FD_ISSET(destfd, &efds))
+        {
+            int err = 0;
+            socklen_t errlen = sizeof(err);
+            char errbuf[256] = "";
+
+            getsockopt(destfd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+            strerror_r(err, errbuf, sizeof(errbuf));
+            logger(LOG_WARNING, "<%s> Server socket error: [%d] %s", conn->logprefix,
+                err, errbuf);
+            continue;
+        }
+    }
+    logger(LOG_DEBUG, "<%s> Closing connection", conn->logprefix);
+    close(destfd);
+}
+
+/**
  * Process SOCKS5 request
  */
 static int socks_process_request(socks_state_t *conn)
 {
-    unsigned char buffer[256 + 6];
     ssize_t len;
-    struct sockaddr_storage dst = { .ss_family = AF_UNSPEC }, out = conn->localaddr;
+    struct sockaddr_storage dst = { .ss_family = AF_UNSPEC }, out = conn->local;
     int errcode = SOCKS_ERR_SUCCESS, destfd = -1;
 
-    if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
+    socks_logger_prefix(conn, "CTRL");
+    if ((len = socks_read(conn, conn->buffer, sizeof(conn->buffer))) < 0)
+        return -1;
+    if (len < 6 || conn->buffer[0] != SOCKS_VERSION5 || conn->buffer[2] != 0x00)
     {
-        if (len < 0)
-            logger(LOG_WARNING, "<%s> Error receiving request: %m",
-                conn->peername);
+        logger(LOG_WARNING, "<%s> Malformed request", conn->logprefix);
         return -1;
     }
-    if (len < 6 || buffer[0] != SOCKS_VERSION5 || buffer[2] != 0x00)
-    {
-        logger(LOG_WARNING, "<%s> Malformed request: [%d] %02x %02x %02x %02x",
-            conn->peername, len, buffer[0], buffer[1], buffer[2], buffer[3]);
-        return -1;
-    }
-    switch (buffer[3]) // ATYP
+    switch (conn->buffer[3]) // ATYP
     {
     default:
-        logger(LOG_NOTICE, "<%s> Unrecognized address type 0x%02X",
-            conn->peername, buffer[3]);
+        logger(LOG_NOTICE, "<%s> Unrecognized address type 0x%02X", conn->logprefix,
+            conn->buffer[3]);
         errcode = SOCKS_ERR_AF_UNSUPPORTED;
         goto ON_ERROR;
     case SOCKS_ADDR_IPV4: // IPv4
         if (len < 10)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (IPv4 len %d)",
-                conn->peername, len);
+            logger(LOG_WARNING, "<%s> Malformed request (IPv4 len %d)", conn->logprefix,
+                len);
             return -1; // Not enough data for IPv4 address
         }
         dst.ss_family = AF_INET;
-        memcpy(&((struct sockaddr_in *)&dst)->sin_addr.s_addr, &buffer[4], 4);
-        memcpy(&((struct sockaddr_in *)&dst)->sin_port, &buffer[4 + 4], 2);
+        memcpy(&((struct sockaddr_in *)&dst)->sin_addr.s_addr, &conn->buffer[4], 4);
+        memcpy(&((struct sockaddr_in *)&dst)->sin_port,        &conn->buffer[4 + 4], 2);
         break;
     case SOCKS_ADDR_DOMAIN: // Domain name
-        if (len < 8 || buffer[4] == 0 || (buffer[4] + 7) > len)
+        if (len < 8 || conn->buffer[4] == 0 || (conn->buffer[4] + 7) > len)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (domain len %d/%d)",
-                conn->peername, len, buffer[4]);
+            logger(LOG_WARNING, "<%s> Malformed request (domain len %d/%d)", conn->logprefix,
+                len, conn->buffer[4]);
             return -1; // Not enough data for domain name
         }
-        {
-            static const struct addrinfo hints = {
-                .ai_flags = AI_ADDRCONFIG,
-            };
-            char hostname[256], serv[16];
-            uint16_t port;
-            struct addrinfo *list;
-            int ret;
-
-            memcpy(hostname, &buffer[5], buffer[4]);
-            hostname[buffer[4]] = '\0';
-            memcpy(&port, &buffer[5 + buffer[4]], 2);
-            snprintf(serv, sizeof(serv), "%u", ntohs(port)); // Yes, I know, that's stupid...
-            if ((ret = getaddrinfo(hostname, serv, &hints, &list)) != 0)
-            {
-                logger(LOG_NOTICE, "<%s> Failed to resolve domain '%s': %s",
-                    conn->peername, hostname, gai_strerror(ret));
-                errcode = SOCKS_ERR_ADDR_INVALID;
-                goto ON_ERROR;
-            }
-            if (list->ai_addrlen > sizeof(dst))
-            {
-                logger(LOG_CRIT, "<%s> FATAL: Address length (%d) exceeds maximum (%d) for domain '%s'",
-                    conn->peername, list->ai_addrlen, sizeof(dst), hostname);
-                exit(1);
-            }
-            memcpy(&dst, list->ai_addr, list->ai_addrlen);
-            freeaddrinfo(list);
-        }
+        if ((errcode = socks_resolve(conn, (const char *)&conn->buffer[5], conn->buffer[4],
+                                     &conn->buffer[5 + conn->buffer[4]], &dst)) != 0)
+            goto ON_ERROR;
         break;
     case SOCKS_ADDR_IPV6: // IPv6
         if (len < 22)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (IPv6 len %d)",
-                conn->peername, len);
+            logger(LOG_WARNING, "<%s> Malformed request (IPv6 len %d)", conn->logprefix,
+                len);
             return -1; // Not enough data for IPv6 address
         }
         dst.ss_family = AF_INET6;
-        memcpy(&((struct sockaddr_in6 *)&dst)->sin6_addr.s6_addr, &buffer[4], 16);
-        memcpy(&((struct sockaddr_in6 *)&dst)->sin6_port, &buffer[4 + 16], 2);
+        memcpy(&((struct sockaddr_in6 *)&dst)->sin6_addr.s6_addr, &conn->buffer[4], 16);
+        memcpy(&((struct sockaddr_in6 *)&dst)->sin6_port,         &conn->buffer[4 + 16], 2);
         break;
     }
-    util_decode_addr((struct sockaddr *)&dst, sizeof(dst), conn->destname, sizeof(conn->destname));
-    switch (buffer[1]) // CMD
+    conn->server = dst;
+    switch (conn->buffer[1]) // CMD
     {
     case SOCKS_CMD_BIND:
     case SOCKS_CMD_ASSOCIATE:
     default:
         // NOTE: BIND and UDP ASSOCIATE/BIND are not implemented yet
-        logger(LOG_NOTICE, "<%s> Unknown command 0x%02X",
-            conn->peername, buffer[1]);
+        logger(LOG_NOTICE, "<%s> Unknown command 0x%02X", conn->logprefix,
+            conn->buffer[1]);
         errcode = SOCKS_ERR_CMD_UNSUPPORTED;
         break;
     case SOCKS_CMD_CONNECT:
-        logger(LOG_DEBUG, "<%s> Connecting to <%s>",
-            conn->peername, conn->destname);
+        socks_logger_prefix(conn, "CONNECT");
+        logger(LOG_DEBUG, "<%s> Connecting...", conn->logprefix);
         if ((destfd = socket(dst.ss_family, SOCK_STREAM, 0)) == -1)
         {
             int err = errno;
-            logger(LOG_WARNING, "<%s> Failed to open socket: %m",
-                conn->peername);
+            logger(LOG_WARNING, "<%s> Failed to open socket: %m", conn->logprefix);
             errcode = socks_errno2reply(err);
             break;
         }
         if (connect(destfd, (struct sockaddr *)&dst, sizeof(dst)) == -1)
         {
             int err = errno;
-            logger(LOG_NOTICE, "<%s | %s> Failed to connect: %m",
-                conn->peername, conn->destname);
+            logger(LOG_NOTICE, "<%s> Failed to connect: %m", conn->logprefix);
             close(destfd);
             errcode = socks_errno2reply(err);
             break;
         }
-        logger(LOG_DEBUG, "<%s | %s> Connected",
-            conn->peername, conn->destname);
+        logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
         break;
     }
 ON_ERROR:
-    buffer[0] = SOCKS_VERSION5;
-    buffer[1] = errcode;
-    buffer[2] = 0x00;
+    conn->buffer[0] = SOCKS_VERSION5;
+    conn->buffer[1] = errcode;
+    conn->buffer[2] = 0x00;
     switch (out.ss_family)
     {
     default:
         // We shouldn't be here, because 'out' is initialized
         // from 'conn->localaddr'; anyway, let's just preserve
         // the original address.
-        logger(LOG_WARNING, "<%s> Invalid AF in response address (internal error)",
-            conn->peername);
+        logger(LOG_WARNING, "<%s> Invalid AF in response address", conn->logprefix);
         break;
     case AF_INET:
-        buffer[3] = SOCKS_ADDR_IPV4;
-        memcpy(&buffer[4], &((struct sockaddr_in *)&out)->sin_addr.s_addr, 4);
-        memcpy(&buffer[4 + 4], &((struct sockaddr_in *)&out)->sin_port, 2);
+        conn->buffer[3] = SOCKS_ADDR_IPV4;
+        memcpy(&conn->buffer[4],     &((struct sockaddr_in *)&out)->sin_addr.s_addr, 4);
+        memcpy(&conn->buffer[4 + 4], &((struct sockaddr_in *)&out)->sin_port,        2);
         len = 10;
         break;
     case AF_INET6:
-        buffer[3] = SOCKS_ADDR_IPV6;
-        memcpy(&buffer[4], &((struct sockaddr_in6 *)&out)->sin6_addr.s6_addr, 16);
-        memcpy(&buffer[4 + 16], &((struct sockaddr_in6 *)&out)->sin6_port, 2);
+        conn->buffer[3] = SOCKS_ADDR_IPV6;
+        memcpy(&conn->buffer[4],      &((struct sockaddr_in6 *)&out)->sin6_addr.s6_addr, 16);
+        memcpy(&conn->buffer[4 + 16], &((struct sockaddr_in6 *)&out)->sin6_port,          2);
         len = 22;
         break;
     }
-    if (send(conn->socket, buffer, len, 0) == -1)
-    {
-        logger(LOG_WARNING, "<%s> Error sending reply: %m",
-            conn->peername);
+    if (socks_write(conn, conn->buffer, len) < 0)
         return -1;
-    }
     if (errcode != SOCKS_ERR_SUCCESS)
         return -1;
     if (destfd != -1)
-    {
-        for (;;)
-        {
-            fd_set rfds, efds;
-            int nfds, ret;
-
-            FD_ZERO(&rfds);
-            FD_SET(conn->socket, &rfds);
-            FD_SET(destfd, &rfds);
-            nfds = (conn->socket > destfd ? conn->socket : destfd) + 1;
-            efds = rfds;
-            if ((ret = select(nfds, &rfds, NULL, &efds, NULL)) == -1)
-            {
-                logger(LOG_WARNING, "<%s | %s> Error while waiting: %m",
-                    conn->peername, conn->destname);
-                break;
-            }
-            if (ret == 0)
-                continue;
-            if (FD_ISSET(conn->socket, &rfds))
-            {
-                if ((len = recv(conn->socket, buffer, sizeof(buffer), 0)) <= 0)
-                {
-                    if (len < 0)
-                        logger(LOG_WARNING, "<%s | %s> Error reading from client: %m",
-                            conn->peername, conn->destname);
-                    break;
-                }
-                if (send(destfd, buffer, len, 0) == -1)
-                {
-                    logger(LOG_WARNING, "<%s | %s> Error writing to server: %m",
-                        conn->peername, conn->destname);
-                    break;
-                }
-                continue;
-            }
-            if (FD_ISSET(destfd, &rfds))
-            {
-                if ((len = recv(destfd, buffer, sizeof(buffer), 0)) <= 0)
-                {
-                    if (len < 0)
-                        logger(LOG_WARNING, "<%s | %s> Error reading from server: %m",
-                            conn->peername, conn->destname);
-                    break;
-                }
-                if (send(conn->socket, buffer, len, 0) == -1)
-                {
-                    logger(LOG_WARNING, "<%s | %s> Error writing to client: %m",
-                        conn->peername, conn->destname);
-                    break;
-                }
-                continue;
-            }
-            if (FD_ISSET(conn->socket, &efds))
-            {
-                int err = 0;
-                socklen_t errlen = sizeof(err);
-                char errbuf[256] = "";
-
-                getsockopt(conn->socket, SOL_SOCKET, SO_ERROR, &err, &errlen);
-                strerror_r(err, errbuf, sizeof(errbuf));
-                logger(LOG_WARNING, "<%s | %s> Client socket error: [%d] %s",
-                    conn->peername, conn->destname, err, errbuf);
-                continue;
-            }
-            if (FD_ISSET(destfd, &efds))
-            {
-                int err = 0;
-                socklen_t errlen = sizeof(err);
-                char errbuf[256] = "";
-
-                getsockopt(destfd, SOL_SOCKET, SO_ERROR, &err, &errlen);
-                strerror_r(err, errbuf, sizeof(errbuf));
-                logger(LOG_WARNING, "<%s | %s> Server socket error: [%d] %s",
-                    conn->peername, conn->destname, err, errbuf);
-                continue;
-            }
-        }
-        logger(LOG_DEBUG, "<%s | %s> Closing connection",
-            conn->peername, conn->destname);
-        close(destfd);
-    }
+        socks_process_data(conn, destfd);
     return 0;
 }
 
@@ -391,24 +448,21 @@ ON_ERROR:
 static void *socks_connection_thread(void *arg)
 {
     socks_state_t conn = {
-        .socket = (int)(intptr_t)arg,
-        .username = NULL,
-        .authdata = NULL,
-        .localaddr = { .ss_family = AF_UNSPEC },
-        .peername = "",
-        .destname = "",
+        .socket    = (int)(intptr_t)arg,
+        .username  = NULL,
+        .authdata  = NULL,
+        .local     = { .ss_family = AF_UNSPEC },
+        .client    = { .ss_family = AF_UNSPEC },
+        .server    = { .ss_family = AF_UNSPEC },
+        .logprefix = "",
     };
+    socklen_t addrlen;
 
-    {
-        struct sockaddr_storage addr;
-        socklen_t addrlen = sizeof(addr);
+    addrlen = sizeof(conn.client);
+    getpeername(conn.socket, (struct sockaddr *)&conn.client, &addrlen);
+    addrlen = sizeof(conn.local);
+    getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
 
-        if (getpeername(conn.socket, (struct sockaddr *)&addr, &addrlen) == 0)
-            util_decode_addr((struct sockaddr *)&addr, addrlen,
-                conn.peername, sizeof(conn.peername));
-        addrlen = sizeof(conn.localaddr);
-        getsockname(conn.socket, (struct sockaddr *)&conn.localaddr, &addrlen);
-    }
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
     close(conn.socket);

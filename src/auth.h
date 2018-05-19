@@ -13,7 +13,7 @@ typedef struct {
     size_t      response_length;  // [OUT] Response length
 } auth_context_t;
 
-typedef int (*auth_callback_t)(const char *peername, int stage, auth_context_t *ctxt);
+typedef int (*auth_callback_t)(const char *logprefix, int stage, auth_context_t *ctxt);
 
 typedef struct {
     int method;

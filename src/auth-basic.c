@@ -13,7 +13,7 @@
 /**
  * AUTH METHOD: User/password authentication (RFC 1929)
  */
-int auth_method_basic(const char *peername, int stage, auth_context_t *ctxt)
+int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt)
 {
     const char *user, *pass, *cpass;
     size_t ulen, plen;
@@ -23,16 +23,14 @@ int auth_method_basic(const char *peername, int stage, auth_context_t *ctxt)
 
     if (stage != 0)
     {
-        logger(LOG_WARNING, "<%s> Too many stages for basic auth",
-            peername);
+        logger(LOG_WARNING, "<%s> Too many stages for basic auth", logprefix);
         return -1;
     }
     if (ctxt->challenge_length < 3 || ctxt->challenge[0] != 0x01 ||
         (ctxt->challenge[1] + 3u) > ctxt->challenge_length)
     {
 MALFORMED:
-        logger(LOG_WARNING, "<%s> Malformed basic auth packet",
-            peername);
+        logger(LOG_WARNING, "<%s> Malformed basic auth packet", logprefix);
         return -1;
     }
     ulen = ctxt->challenge[1];
@@ -56,8 +54,7 @@ MALFORMED:
 
     if (ctxt->response_maxlen < 2)
     {
-        logger(LOG_WARNING, "<%s> Not enough space for basic auth response",
-            peername);
+        logger(LOG_WARNING, "<%s> Not enough space for basic auth response", logprefix);
         return -1;
     }
     ctxt->response[0] = 0x01;
