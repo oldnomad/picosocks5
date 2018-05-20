@@ -150,6 +150,18 @@ static void usage(const char *bin_name)
     exit(2);
 }
 
+volatile sig_atomic_t EXIT_SIGNO = 0; // Signal that resulted in an abort
+
+static void signal_handler(int signo)
+{
+    int fd;
+
+    EXIT_SIGNO = signo;
+    for (fd = 3; fd < FD_SETSIZE; fd++)
+        if (fcntl(fd, F_GETFL) != -1)
+            close(fd);
+}
+
 int main(int argc, char **argv)
 {
     int nofork = 0, logmode = 0, loglevel = -1;
@@ -159,6 +171,10 @@ int main(int argc, char **argv)
     const char *listen_service = "1080";
     int opt, nfds;
     fd_set fds;
+    struct sigaction sa = {
+        .sa_flags   = 0,
+        .sa_handler = signal_handler,
+    };
 
     while ((opt = getopt_long(argc, argv, SHORT_OPTS, LONG_OPTS, NULL)) != -1)
     {
@@ -239,12 +255,20 @@ int main(int argc, char **argv)
             listen_host = NULL;
     }
     logger_init(nofork, logmode, loglevel);
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGINT,  &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
     if ((nfds = socks_listen_at(listen_host, listen_service, &fds)) < 0)
         exit(1);
     if (nofork == 0)
         daemonize(drop_gid, drop_uid);
     logger(LOG_INFO, "Running %s, built on %s %s", PACKAGE_STRING, __DATE__, __TIME__);
     socks_accept_loop(nfds, &fds);
-    logger(LOG_INFO, "Exiting");
+    if (EXIT_SIGNO != 0)
+        logger(LOG_ERR, "Received signal %d, exiting", EXIT_SIGNO);
+    else
+        logger(LOG_INFO, "Exiting");
     return 0;
 }
