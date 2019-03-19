@@ -91,5 +91,5 @@ const authuser_t *authuser_find(int method, const char *username, const authuser
     }
     for (; u != NULL && (u->user.method != method ||
                          strcmp(u->user.username, username) != 0); u = u->next);
-    return &u->user;
+    return u == NULL ? NULL : &u->user;
 }
