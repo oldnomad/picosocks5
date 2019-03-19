@@ -63,7 +63,7 @@ For building PicoSOCKS5 you'll need:
 First, get the latest sources and run configure:
 
 ```bash
-git clone https://github.com/oldnomad/picosocks5.git
+git clone https://gitlab.com/oldnomad/picosocks5
 cd picosocks5
 ./configure
 ```
