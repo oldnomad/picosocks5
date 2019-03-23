@@ -15,6 +15,31 @@
 #include "logger.h"
 #include "util.h"
 
+#define BUILD_TIMESTAMP __DATE__ " " __TIME__
+
+#define DEFAULT_LISTEN_SERVICE "1080"
+
+/**
+ * Daemon configuration.
+ */
+static struct cfg {
+    int   nofork;         // Don't fork to background
+    int   logmode;        // Logging mode (syslog and/or stderr)
+    int   loglevel;       // Logging verbosity level
+    uid_t drop_uid;       // UID to drop to, or -1
+    gid_t drop_gid;       // GID to drop to, or -1
+    char *listen_host;    // Address to listen on, or null for all
+    char *listen_service; // Port to listen on, or null for default
+} CONFIG = {
+    .nofork         = 0,
+    .logmode        = 0,
+    .loglevel       = -1,
+    .drop_uid       = -1,
+    .drop_gid       = -1,
+    .listen_host    = NULL,
+    .listen_service = NULL,
+};
+
 /**
  * Fork to background.
  */
@@ -64,7 +89,7 @@ static void daemonize(uid_t uid, gid_t gid)
 }
 
 
-static const char SHORT_OPTS[] = "a:Au:g:L:v:h";
+static const char SHORT_OPTS[] = "a:Au:g:L:v:hV";
 static const struct option LONG_OPTS[] = {
     { "nofork",      0, NULL, 1000 },
     { "logmode",     1, NULL, 'L'  },
@@ -74,6 +99,7 @@ static const struct option LONG_OPTS[] = {
     { "user",        1, NULL, 'u'  },
     { "group",       1, NULL, 'g'  },
     { "help",        0, NULL, 'h'  },
+    { "version",     0, NULL, 'V'  },
     { NULL }
 };
 static const char OPTIONS_DESC[] =
@@ -117,7 +143,9 @@ static const char OPTIONS_DESC[] =
     "            debug    - also debugging messages;\n"
     "            none     - suppress logging completely.\n\n"
     "    -h, --help\n"
-    "        Print usage information and exit.\n";
+    "        Print usage information and exit.\n\n"
+    "    -V, --version\n"
+    "        Print daemon version and exit.\n";
 static const char ARG_DESC[] =
     //        1         2         3         4         5         7
     //23456789012345678901234567890123456789012345678901234567890123567890
@@ -142,12 +170,129 @@ static const char AUTHFILE_DESC[] =
     "        support SHA-256 (prefix \"$5$\"), SHA-512 (prefix \"$6$\"),\n"
     "        and, in some distributions, Blowfish (prefix \"$2a$\").\n";
 
+static void version(void)
+{
+    printf("%s version %s built on %s\n", PACKAGE_NAME, PACKAGE_VERSION, BUILD_TIMESTAMP);
+}
+
 static void usage(const char *bin_name)
 {
-    printf("Usage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
+    version();
+    printf("\nUsage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
            "%s\n%s\n%s",
            bin_name, ARG_DESC, OPTIONS_DESC, AUTHFILE_DESC);
-    exit(2);
+}
+
+static int process_option(const char *bin_name, int opt, const char *arg)
+{
+    switch (opt)
+    {
+    case '?': // Error in options
+        return 1;
+    case -1: // <listen-address>:<listen-port>
+        {
+            size_t alen = strlen(arg), hlen;
+            const char *sep;
+            char *host = NULL;
+            char *serv = NULL;
+
+            if (alen == 0)
+            {
+                fprintf(stderr, "Empty listen address\n");
+                return 1;
+            }
+            if (arg[0] == '[') // Literal IPv6 address
+            {
+                sep = strrchr(arg, ']');
+                if (sep == NULL)
+                {
+                    fprintf(stderr, "Missing closing bracket: %s\n", arg);
+                    return 1;
+                }
+                ++sep;
+            }
+            else
+            {
+                sep = strchr(arg, ':');
+                if (sep == NULL)
+                    sep = &arg[alen];
+            }
+            hlen = sep - arg;
+            if (hlen > 0 && (hlen != 1 || arg[0] != '*'))
+            {
+                host = malloc(hlen + 1);
+                if (host == NULL)
+                {
+                    fprintf(stderr, "Not enough memory for host: %s\n", arg);
+                    return 1;
+                }
+                memcpy(host, arg, hlen);
+                host[hlen] = '\0';
+            }
+            if (sep[0] == ':' && sep[1] != '\0')
+            {
+                serv = strdup(&sep[1]);
+                if (serv == NULL)
+                {
+                    fprintf(stderr, "Not enough memory for service: %s\n", arg);
+                    return 1;
+                }
+            }
+            if (CONFIG.listen_host != NULL)
+                free(CONFIG.listen_host);
+            CONFIG.listen_host = host;
+            if (CONFIG.listen_service != NULL)
+                free(CONFIG.listen_service);
+            CONFIG.listen_service = serv;
+        }
+        break;
+    case 1000: // --nofork
+        CONFIG.nofork = 1;
+        break;
+    case 'L': // --logmode=<mode>
+        if ((CONFIG.logmode = logger_name2mode(arg)) < 0)
+        {
+            fprintf(stderr, "Unknown logging mode '%s'\n", arg);
+            return 1;
+        }
+        if (logger_need_nofork(CONFIG.logmode))
+            CONFIG.nofork = 1;
+        break;
+    case 'v': // --loglevel=<level>
+        if ((CONFIG.loglevel = logger_name2level(arg)) < 0)
+        {
+            fprintf(stderr, "Unknown logging level '%s'\n", arg);
+            return 1;
+        }
+        break;
+    case 'a': // --auth=[<format>:]<secrets-file>
+        authfile_parse(arg);
+        break;
+    case 'A': // --anonymous
+        authuser_anon_allow(1);
+        break;
+    case 'u': // --user=<uid>
+        if ((CONFIG.drop_uid = util_parse_user(arg)) == (uid_t)-1)
+        {
+            fprintf(stderr, "Cannot find user '%s'\n", arg);
+            return 1;
+        }
+        break;
+    case 'g': // --group=<gid>
+        if ((CONFIG.drop_gid = util_parse_group(arg)) == (gid_t)-1)
+        {
+            fprintf(stderr, "Cannot find group '%s'\n", arg);
+            return 1;
+        }
+        break;
+    case 'h': // --help
+        usage(bin_name);
+        return 2;
+    case 'V': // --version
+        version();
+        return 2;
+    }
+    return 0;
 }
 
 volatile sig_atomic_t EXIT_SIGNO = 0; // Signal that resulted in an abort
@@ -164,12 +309,7 @@ static void signal_handler(int signo)
 
 int main(int argc, char **argv)
 {
-    int nofork = 0, logmode = 0, loglevel = -1;
-    gid_t drop_gid = -1;
-    uid_t drop_uid = -1;
-    const char *listen_host = NULL;
-    const char *listen_service = "1080";
-    int opt, nfds;
+    int ret, opt, nfds;
     fd_set fds;
     struct sigaction sa = {
         .sa_flags   = 0,
@@ -177,94 +317,32 @@ int main(int argc, char **argv)
     };
 
     while ((opt = getopt_long(argc, argv, SHORT_OPTS, LONG_OPTS, NULL)) != -1)
-    {
-        switch (opt)
-        {
-        case '?': // Error in options
-            exit(1);
-            break;
-        case 1000: // --nofork
-            nofork = 1;
-            break;
-        case 'L': // --logmode=<mode>
-            if ((logmode = logger_name2mode(optarg)) < 0)
-            {
-                fprintf(stderr, "Unknown logging mode '%s'\n", optarg);
-                exit(1);
-            }
-            if (logger_need_nofork(logmode))
-                nofork = 1;
-            break;
-        case 'v': // --loglevel=<level>
-            if ((loglevel = logger_name2level(optarg)) < 0)
-            {
-                fprintf(stderr, "Unknown logging level '%s'\n", optarg);
-                exit(1);
-            }
-            break;
-        case 'a': // --auth=[<format>:]<secrets-file>
-            authfile_parse(optarg);
-            break;
-        case 'A':
-            authuser_anon_allow(1);
-            break;
-        case 'u': // --user=<uid>
-            if ((drop_uid = util_parse_user(optarg)) == (uid_t)-1)
-            {
-                fprintf(stderr, "Cannot find user '%s'\n", optarg);
-                exit(1);
-            }
-            break;
-        case 'g': // --group=<gid>
-            if ((drop_gid = util_parse_group(optarg)) == (gid_t)-1)
-            {
-                fprintf(stderr, "Cannot find group '%s'\n", optarg);
-                exit(1);
-            }
-            break;
-        case 'h': // --help
-            usage(argv[0]);
-            break;
-        }
-    }
+        if ((ret = process_option(argv[0], opt, optarg)) != 0)
+            exit(ret);
     if (optind < argc)
     {
-        const char *arg = argv[optind];
-        size_t alen = strlen(arg);
-
         if ((optind + 1) < argc)
+        {
             usage(argv[0]);
-        if (alen == 0)
-        {
-            fprintf(stderr, "Empty listen address\n");
-            exit(1);
+            exit(2);
         }
-        listen_host = arg;
-        if (arg[alen - 1] != ']') // Not literal IPv6
-        {
-            char *sp = strrchr(arg, ':');
-            if (sp != NULL)
-            {
-                // We modify argv; that's not pretty, but allowed
-                *sp++ = '\0';
-                listen_service = sp;
-            }
-        }
-        if (listen_host[0] == '\0' ||
-            (listen_host[0] == '*' && listen_host[1] == '\0'))
-            listen_host = NULL;
+        if ((ret = process_option(argv[0], -1, argv[optind])) != 0)
+            exit(ret);
     }
-    logger_init(nofork, logmode, loglevel);
+    if (CONFIG.listen_service == NULL)
+        CONFIG.listen_service = DEFAULT_LISTEN_SERVICE;
+
+    logger_init(CONFIG.nofork, CONFIG.logmode, CONFIG.loglevel);
     sigemptyset(&sa.sa_mask);
     sigaction(SIGABRT, &sa, NULL);
     sigaction(SIGINT,  &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
-    if ((nfds = socks_listen_at(listen_host, listen_service, &fds)) < 0)
+    if ((nfds = socks_listen_at(CONFIG.listen_host, CONFIG.listen_service, &fds)) < 0)
         exit(1);
-    if (nofork == 0)
-        daemonize(drop_gid, drop_uid);
-    logger(LOG_INFO, "Running %s, built on %s %s", PACKAGE_STRING, __DATE__, __TIME__);
+    if (CONFIG.nofork == 0)
+        daemonize(CONFIG.drop_gid, CONFIG.drop_uid);
+    logger(LOG_INFO, "Running %s version %s, built on %s", PACKAGE_NAME, PACKAGE_VERSION, BUILD_TIMESTAMP);
     socks_accept_loop(nfds, &fds);
     if (EXIT_SIGNO != 0)
         logger(LOG_ERR, "Received signal %d, exiting", EXIT_SIGNO);
