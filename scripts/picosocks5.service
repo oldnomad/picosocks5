@@ -1,0 +1,10 @@
+[Unit]
+Description=PicoSOCKS5 Daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/pickosocks5 --config /etc/picosocks5.conf
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
