@@ -1,6 +1,7 @@
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,8 +90,9 @@ static void daemonize(uid_t uid, gid_t gid)
 }
 
 
-static const char SHORT_OPTS[] = "a:Au:g:L:v:hV";
+static const char SHORT_OPTS[] = "c:a:Au:g:L:v:hV";
 static const struct option LONG_OPTS[] = {
+    { "config",      1, NULL, 'c'  },
     { "nofork",      0, NULL, 1000 },
     { "logmode",     1, NULL, 'L'  },
     { "loglevel",    1, NULL, 'v'  },
@@ -106,6 +108,20 @@ static const char OPTIONS_DESC[] =
     //        1         2         3         4         5         7
     //23456789012345678901234567890123456789012345678901234567890123567890
     "Options:\n\n"
+    "    -c <config-file>\n"
+    "        Read options from specified configuration file. Note that\n"
+    "        command-line options are processed in order, so options\n"
+    "        specified in the file will override options specified in\n"
+    "        the command line earlier, and will be overridden by options\n"
+    "        specified in the command line later.\n\n"
+    "        Configuration file is a text file in basic INI format (no\n"
+    "        sections, no whitespace before or after equals sign, no\n"
+    "        multiline values, comments on separate line starting with\n"
+    "        \"#\"). Parameter names are long option names. Trigger\n"
+    "        options (\"nofork\", \"anonymous\", etc) are specified as\n"
+    "        boolean values. Listen address (positional parameter) can\n"
+    "        be specified in the configuration file as an parameter with\n"
+    "        name \"listen\".\n\n"
     "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
     "        Secrets file for authentication. If format is not\n"
     "        explicitly specified, \"password\" is implied. See below\n"
@@ -183,12 +199,22 @@ static void usage(const char *bin_name)
            bin_name, ARG_DESC, OPTIONS_DESC, AUTHFILE_DESC);
 }
 
-static int process_option(const char *bin_name, int opt, const char *arg)
+static int value2bool(const char *value)
+{
+    if (value == NULL)
+        return 1;
+    return (strcasecmp(value, "true") == 0 ||
+            strcasecmp(value, "yes") == 0 ||
+            strcmp(value, "1") == 0) ? 1 : 0;
+}
+
+static int process_option(const char *bin_name, int opt, const char *arg, int in_file)
 {
     switch (opt)
     {
+    default:
     case '?': // Error in options
-        return 1;
+        return in_file ? -1 : 1;
     case -1: // <listen-address>:<listen-port>
         {
             size_t alen = strlen(arg), hlen;
@@ -246,8 +272,72 @@ static int process_option(const char *bin_name, int opt, const char *arg)
             CONFIG.listen_service = serv;
         }
         break;
+    case 'c':  // --config=<config-file>
+        if (in_file)
+            return -1;
+        {
+            FILE *cfp = fopen(arg, "rt");
+            char line[1024];
+            int ret = 0;
+
+            if (cfp == NULL)
+            {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+                fprintf(stderr, "Cannot open config file '%s': %m\n", arg);
+#pragma GCC diagnostic pop
+                return 1;
+            }
+            while (ret == 0 && fgets(line, sizeof(line), cfp) != NULL)
+            {
+                char *sp, *ep;
+                const struct option *o;
+
+                for (sp = &line[strlen(line)];
+                     sp > line && isspace(sp[-1]); sp--);
+                *sp = '\0';
+                for (sp = line; *sp != '\0' && isspace(*sp); sp++);
+                if (*sp == '\0' || *sp == '#')
+                    continue;
+                if ((ep = strchr(sp, '=')) == NULL)
+                {
+                    fprintf(stderr, "Unseparated line '%s' in config file '%s'\n",
+                        sp, arg);
+                    ret = 1;
+                    break;
+                }
+                *ep++ = '\0';
+                if (strcmp(sp, "listen") == 0)
+                    ret = process_option(bin_name, -1, ep, 1);
+                else
+                {
+                    for (o = LONG_OPTS; o->name != NULL; o++)
+                        if (strcmp(sp, o->name) == 0)
+                        {
+                            ret = process_option(bin_name, o->val, ep, 1);
+                            break;
+                        }
+                    if (o->name == NULL || ret < 0)
+                    {
+                        fprintf(stderr, "Unrecognized option '%s' in config file '%s'\n",
+                            sp, arg);
+                        ret = 1;
+                        break;
+                    }
+                }
+            }
+            fclose(cfp);
+            if (ret != 0)
+                return ret;
+        }
+        break;
     case 1000: // --nofork
-        CONFIG.nofork = 1;
+        if (CONFIG.nofork < 0)
+            break;
+        if (in_file)
+            CONFIG.nofork = value2bool(arg);
+        else
+            CONFIG.nofork = 1;
         break;
     case 'L': // --logmode=<mode>
         if ((CONFIG.logmode = logger_name2mode(arg)) < 0)
@@ -256,7 +346,7 @@ static int process_option(const char *bin_name, int opt, const char *arg)
             return 1;
         }
         if (logger_need_nofork(CONFIG.logmode))
-            CONFIG.nofork = 1;
+            CONFIG.nofork = -1;
         break;
     case 'v': // --loglevel=<level>
         if ((CONFIG.loglevel = logger_name2level(arg)) < 0)
@@ -269,7 +359,10 @@ static int process_option(const char *bin_name, int opt, const char *arg)
         authfile_parse(arg);
         break;
     case 'A': // --anonymous
-        authuser_anon_allow(1);
+        if (in_file)
+            authuser_anon_allow(value2bool(arg));
+        else
+            authuser_anon_allow(1);
         break;
     case 'u': // --user=<uid>
         if ((CONFIG.drop_uid = util_parse_user(arg)) == (uid_t)-1)
@@ -286,9 +379,13 @@ static int process_option(const char *bin_name, int opt, const char *arg)
         }
         break;
     case 'h': // --help
+        if (in_file)
+            return -1;
         usage(bin_name);
         return 2;
     case 'V': // --version
+        if (in_file)
+            return -1;
         version();
         return 2;
     }
@@ -317,7 +414,7 @@ int main(int argc, char **argv)
     };
 
     while ((opt = getopt_long(argc, argv, SHORT_OPTS, LONG_OPTS, NULL)) != -1)
-        if ((ret = process_option(argv[0], opt, optarg)) != 0)
+        if ((ret = process_option(argv[0], opt, optarg, 0)) != 0)
             exit(ret);
     if (optind < argc)
     {
@@ -326,7 +423,7 @@ int main(int argc, char **argv)
             usage(argv[0]);
             exit(2);
         }
-        if ((ret = process_option(argv[0], -1, argv[optind])) != 0)
+        if ((ret = process_option(argv[0], -1, argv[optind], 0)) != 0)
             exit(ret);
     }
     if (CONFIG.listen_service == NULL)
