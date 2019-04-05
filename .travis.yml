@@ -2,4 +2,4 @@ language: c
 os: linux
 dist: trusty
 compiler: gcc
-script: autoreconf -f -i && ./configure && make
+script: autoreconf -f -i -Wall && ./configure && make
