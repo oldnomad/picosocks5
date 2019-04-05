@@ -10,7 +10,29 @@ enum {
     SOCKS_AUTH_NONE     = 0x00, // Unauthenticated access
     SOCKS_AUTH_GSSAPI   = 0x01, // GSSAPI
     SOCKS_AUTH_BASIC    = 0x02, // Username/password authentication
+    SOCKS_AUTH_CHAP     = 0x03, // CHAP authentication (deaft)
     SOCKS_AUTH_INVALID  = 0xFF, // Negotiations failed
+};
+
+/**
+ * CHAP authentication attributes
+ */
+enum {
+    SOCKS_CHAP_ATTR_STATUS    = 0x00, // Authentication status
+    SOCKS_CHAP_ATTR_MESSAGE   = 0x01, // Text message
+    SOCKS_CHAP_ATTR_USERID    = 0x02, // Uaer ID
+    SOCKS_CHAP_ATTR_CHALLENGE = 0x03, // Challenge
+    SOCKS_CHAP_ATTR_RESPONSE  = 0x04, // Response
+    SOCKS_CHAP_ATTR_CHARSET   = 0x05, // Text charset
+    SOCKS_CHAP_ATTR_IDENT     = 0x10, // Identifier (if algo needs it)
+    SOCKS_CHAP_ATTR_ALGO      = 0x11, // Algorithm list
+};
+
+/**
+ * CHAP authentication algorithms
+ */
+enum {
+    SOCKS_CHAP_ALGO_HMAC_MD5  = 0x85, // HMAC-MD5
 };
 
 /**
