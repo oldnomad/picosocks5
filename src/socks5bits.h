@@ -10,7 +10,7 @@ enum {
     SOCKS_AUTH_NONE     = 0x00, // Unauthenticated access
     SOCKS_AUTH_GSSAPI   = 0x01, // GSSAPI
     SOCKS_AUTH_BASIC    = 0x02, // Username/password authentication
-    SOCKS_AUTH_CHAP     = 0x03, // CHAP authentication (deaft)
+    SOCKS_AUTH_CHAP     = 0x03, // CHAP authentication (draft)
     SOCKS_AUTH_INVALID  = 0xFF, // Negotiations failed
 };
 
