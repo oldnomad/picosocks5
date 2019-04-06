@@ -49,8 +49,8 @@ void authfile_format_password(const char *filespec)
         {
             fprintf(stderr, "User '%s' in file '%s' is in old format, fixed\n",
                 line, filespec);
-            sp = NULL;
             pp = sp;
+            sp = NULL;
         }
         else
             *pp++ = '\0';
