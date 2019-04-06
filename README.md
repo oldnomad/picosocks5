@@ -58,23 +58,18 @@ For building PicoSOCKS5 you'll need:
   So if you have another POSIX-compliant C runtime library that includes these features,
   PicoSOCKS5 can be ported to it.
 - GNU Autoconf/Automake, and their dependencies. The project is built using automake version
-  1.15, but version 1.14 is also known to work (with reconfiguration, see below).
+  1.15, but version 1.14 is also known to work.
 
-First, get the latest sources and run configure:
+First, get the latest sources and configure the project:
 
 ```bash
 git clone https://gitlab.com/oldnomad/picosocks5
 cd picosocks5
+autoreconf -f -i -Wall
 ./configure
 ```
 
-Now, if your version of automake is not 1.15, you'll have to reconfigure it:
-
-```bash
-autoreconf -f -i
-```
-
-Finally, build and install the daemon:
+Next, build and install the daemon:
 
 ```bash
 make && sudo make install
