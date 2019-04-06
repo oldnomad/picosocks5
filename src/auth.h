@@ -14,7 +14,7 @@ typedef struct {
 } auth_context_t;
 
 typedef int (*auth_callback_t)(const char *logprefix, int stage, auth_context_t *ctxt);
-typedef ssize_t (*auth_generator_t)(const char *secret, unsigned char *buffer, size_t bufsize);
+typedef ssize_t (*auth_generator_t)(const char *secret, char *buffer, size_t bufsize);
 
 typedef struct {
     int method;
@@ -26,3 +26,6 @@ typedef struct {
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);
 const auth_method_t *auth_find_method(const char *name);
 const auth_method_t *auth_all_methods(void);
+
+extern const char   BASE64_PREFIX[];
+extern const size_t BASE64_PREFIX_LEN;

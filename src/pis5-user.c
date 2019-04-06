@@ -160,7 +160,7 @@ int main(int argc, char **argv)
             continue;
         if ((methods[m->method / 8] & (1u << (m->method % 8))) == 0)
             continue;
-        if ((seclen = m->generator(password, (unsigned char *)secret, sizeof(secret))) < 0)
+        if ((seclen = m->generator(password, secret, sizeof(secret))) < 0)
             continue;
         printf("%s:%s:%.*s\n", username, m->name, (int)seclen, secret);
     }

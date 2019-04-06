@@ -12,8 +12,6 @@
 
 #define MAX_LINE_LENGTH 1024 // Maximum line length
 
-static const char BASE64_PREFIX[] = "$base64$";
-
 /**
  * AUTH FILE FORMAT: Text file with lines containing colon-separated
  * username, auth method name, and method-dependent secret.
@@ -59,9 +57,9 @@ void authfile_format_password(const char *filespec)
         m = auth_find_method(sp);
         if (m == NULL)
             continue;
-        if (strncmp(pp, BASE64_PREFIX, sizeof(BASE64_PREFIX) - 1) == 0)
+        if (strncmp(pp, BASE64_PREFIX, BASE64_PREFIX_LEN) == 0)
         {
-            ssize_t len = util_base64_decode(pp + sizeof(BASE64_PREFIX) - 1, decbuf, sizeof(decbuf));
+            ssize_t len = util_base64_decode(pp + BASE64_PREFIX_LEN, decbuf, sizeof(decbuf));
             if (len < 0)
             {
                 fprintf(stderr, "Invalid Base64 encoding for user '%s' in auth file '%s'\n",

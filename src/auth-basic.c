@@ -70,7 +70,7 @@ MALFORMED:
 /**
  * AUTH GENERATOR: Encrypt a password
  */
-ssize_t auth_secret_basic(const char *password, unsigned char *buffer, size_t bufsize)
+ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
 {
     static const char ALPHABET[] = "ABCDEFGHIJKLMNOP"
                                    "QRSTUVWXYZabcdef"

@@ -21,4 +21,6 @@
  * - Go to auth.c and insert an element into AUTH_METHODS[] array.
  */
 int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt);
-ssize_t auth_secret_basic(const char *password, unsigned char *buffer, size_t bufsize);
+ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize);
+int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt);
+ssize_t auth_secret_chap(const char *password, char *buffer, size_t bufsize);

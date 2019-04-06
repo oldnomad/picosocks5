@@ -11,15 +11,21 @@
  * List of supported methods, in preference decreasing order
  */
 static const auth_method_t AUTH_METHODS[] = {
+    { SOCKS_AUTH_CHAP,    "chap",
+      .callback  = auth_method_chap,
+      .generator = auth_secret_chap },
     { SOCKS_AUTH_BASIC,   "basic",
       .callback  = auth_method_basic,
       .generator = auth_secret_basic },
-    { SOCKS_AUTH_CHAP,    "chap",
-      .callback  = NULL,
-      .generator = NULL },
     { SOCKS_AUTH_NONE,    NULL, NULL, NULL },
     { SOCKS_AUTH_INVALID, NULL, NULL, NULL }
 };
+
+/**
+ * Prefix for Base64 secret encoding
+ */
+const char   BASE64_PREFIX[]   = "$base64$";
+const size_t BASE64_PREFIX_LEN = sizeof(BASE64_PREFIX) - 1;
 
 /**
  * Find a suitable method from client-provided offer
