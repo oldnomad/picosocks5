@@ -484,7 +484,7 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
     }
     for (ptr = addrlist; ptr != NULL; ptr = ptr->ai_next)
     {
-        int sock;
+        int sock, val;
         char hostaddr[UTIL_ADDRSTRLEN];
 
         util_decode_addr(ptr->ai_addr, ptr->ai_addrlen, hostaddr, sizeof(hostaddr));
@@ -495,9 +495,11 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
         }
         if (ptr->ai_family == AF_INET6)
         {
-            int on = 1;
-            setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));
+            val = 1;
+            setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val));
         }
+        val = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
         if (bind(sock, ptr->ai_addr, ptr->ai_addrlen) == -1)
         {
             logger(LOG_ERR, "Failed to bind address <%s>: %m", hostaddr);
