@@ -3,3 +3,6 @@ sbin_PROGRAMS = picosocks5
 picosocks5_SOURCES = main.c socks5.c logger.c util.c \
     auth.c authuser.c auth-basic.c \
     authfile.c authfile-password.c
+EXTRA_picosocks5_SOURCES = crypto-openssl.c
+picosocks5_LDADD = $(CRYPTO_MODULE)
+picosocks5_DEPENDENCIES = $(CRYPTO_MODULE)

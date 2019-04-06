@@ -5,6 +5,9 @@ AC_CONFIG_FILES([
  Makefile
  src/Makefile
 ])
+AC_ARG_WITH([openssl],
+            [AS_HELP_STRING([--without-openssl], [disable support for OpenSSL])],
+            [want_openssl="$withval"])
 
 AC_PROG_CC
 AC_PROG_CC_C99
@@ -23,5 +26,25 @@ AC_CHECK_FUNCS([dup2 memchr memmove select socket strcasecmp strchr strrchr strt
 
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(crypt_r, [crypt])
+
+CRYPTO_LIBS=
+CRYPTO_MODULE=
+CRYPTO_MODULE_FAR=
+CRYPTO_HMACMD5=
+AS_IF([test -z "$CRYPTO_LIBS" -a "x$want_openssl" != xno],
+      [AC_CHECK_LIB([ssl], [SSL_CTX_new],
+                    [CRYPTO_LIBS="-lssl -lcrypto"
+                     CRYPTO_MODULE="crypto-openssl.\$(OBJEXT)"
+                     AC_CHECK_LIB([crypto], [EVP_md5],              [CRYPTO_HMACMD5="yes"])
+                    ])
+      ])
+AS_IF([test "x$CRYPTO_HMACMD5" = xyes ],
+      [AC_DEFINE([HAVE_CRYPTO_LIB], [1], [Use cryptographic methods])
+       AS_IF([test "x$CRYPTO_HMACMD5" = xyes],
+             [AC_DEFINE([HAVE_CRYPTO_HMACMD5], [1], [Use HMAC-MD5 (RFC 2104, RFC 1321)])])
+       LIBS="$CRYPTO_LIBS $LIBS"
+       CRYPTO_MODULE_FAR="\$(top_builddir)/src/$CRYPTO_MODULE"])
+AC_SUBST([CRYPTO_MODULE])
+AC_SUBST([CRYPTO_MODULE_FAR])
 
 AC_OUTPUT
