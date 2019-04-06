@@ -11,9 +11,11 @@
  * List of supported methods, in preference decreasing order
  */
 static const auth_method_t AUTH_METHODS[] = {
+#if HAVE_CRYPTO_HMACMD5
     { SOCKS_AUTH_CHAP,    "chap",
       .callback  = auth_method_chap,
       .generator = auth_secret_chap },
+#endif // HAVE_CRYPTO_HMACMD5
     { SOCKS_AUTH_BASIC,   "basic",
       .callback  = auth_method_basic,
       .generator = auth_secret_basic },
