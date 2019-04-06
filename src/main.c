@@ -115,21 +115,9 @@ static const char OPTIONS_DESC[] =
     "        specified in the file will override options specified in\n"
     "        the command line earlier, and will be overridden by options\n"
     "        specified in the command line later.\n\n"
-    "        Configuration file is a text file in basic INI format (no\n"
-    "        sections, no whitespace before or after equals sign, no\n"
-    "        multiline values, comments on separate line starting with\n"
-    "        \"#\"). Parameter names are long option names. Trigger\n"
-    "        options (\"nofork\", \"anonymous\", etc) are specified as\n"
-    "        boolean values. Listen address (positional parameter) can\n"
-    "        be specified in the configuration file as an parameter with\n"
-    "        name \"listen\".\n\n"
     "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
     "        Secrets file for authentication. If format is not\n"
-    "        explicitly specified, \"password\" is implied. See below\n"
-    "        about supported formats. Note that defining a secrets file\n"
-    "        with users available for non-anonymous authentication\n"
-    "        disables anonymous access, unless --anonymous is also\n"
-    "        specified.\n\n"
+    "        explicitly specified, \"password\" is implied.\n\n"
     "    -A, --anonymous\n"
     "        Allow anonymous access even if there is a non-anonymous\n"
     "        method available.\n\n"
@@ -172,20 +160,6 @@ static const char ARG_DESC[] =
     "Listen port can be specified as a literal port number, or a\n"
     "service name.\n\n"
     "By default \"*:1080\" is used.\n";
-static const char AUTHFILE_DESC[] =
-    //        1         2         3         4         5         7
-    //23456789012345678901234567890123456789012345678901234567890123567890
-    "Authentication file formats:\n\n"
-    "    password\n"
-    "        File is a text file, each line containing user name and\n"
-    "        password hash separated by semicolon (':'). No empty lines\n"
-    "        or comments are allowed.\n\n"
-    "        Password hash can be any type of salted hash supported by\n"
-    "        your GLibC version (see man 3 crypt). All versions of GLibC\n"
-    "        support MD5-crypt (prefix \"$1$\"), as produced, for example,\n"
-    "        by command \"openssl passwd -1\". Recent GLibC versions also\n"
-    "        support SHA-256 (prefix \"$5$\"), SHA-512 (prefix \"$6$\"),\n"
-    "        and, in some distributions, Blowfish (prefix \"$2a$\").\n";
 
 static void version(void)
 {
@@ -196,8 +170,8 @@ static void usage(const char *bin_name)
 {
     version();
     printf("\nUsage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
-           "%s\n%s\n%s",
-           bin_name, ARG_DESC, OPTIONS_DESC, AUTHFILE_DESC);
+           "%s\n%s",
+           bin_name, ARG_DESC, OPTIONS_DESC);
 }
 
 static int value2bool(const char *value)
