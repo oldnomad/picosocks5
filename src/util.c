@@ -137,7 +137,7 @@ ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
     // we'd accept, e.g., "AAAA=!?" as a valid sequence for 3 zeros.
     while (*text != '\0')
     {
-        const char *cp = memchr(BASE64_ALPHA, *text++, 64);
+        const char *cp = memchr(BASE64_ALPHA, *text++, 65);
         if (cp == NULL)
             return -1;
         ch = (unsigned char)(cp - BASE64_ALPHA);
