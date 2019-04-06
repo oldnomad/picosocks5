@@ -11,9 +11,10 @@
  * List of supported methods, in preference decreasing order
  */
 static const auth_method_t AUTH_METHODS[] = {
-    { SOCKS_AUTH_BASIC,   auth_method_basic },
-    { SOCKS_AUTH_NONE,    NULL              },
-    { SOCKS_AUTH_INVALID, NULL              }
+    { SOCKS_AUTH_BASIC,   "basic", auth_method_basic },
+    { SOCKS_AUTH_CHAP,    "chap",  NULL              },
+    { SOCKS_AUTH_NONE,    NULL,    NULL              },
+    { SOCKS_AUTH_INVALID, NULL,    NULL              }
 };
 
 /**
@@ -31,4 +32,27 @@ const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t of
             return m;
     }
     return NULL;
+}
+
+/**
+ * Find authentication method by its name
+ */
+const auth_method_t *auth_find_method(const char *name)
+{
+    const auth_method_t *m;
+
+    if (name == NULL || *name == '\0')
+        name = "basic";
+    for (m = AUTH_METHODS; m->method != SOCKS_AUTH_INVALID; m++)
+        if (m->name != NULL && strcmp(name, m->name) == 0)
+            return m;
+    return NULL;
+}
+
+/**
+ * List all known methods.
+ */
+const auth_method_t *auth_all_methods(void)
+{
+    return AUTH_METHODS;
 }

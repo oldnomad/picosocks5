@@ -3,11 +3,21 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <grp.h>
 #include "util.h"
+
+/**
+ * Base64 alphabet (RFC 4648)
+ */
+static const char BASE64_ALPHA[65] = "ABCDEFGHIJKLMNOP"
+                                     "QRSTUVWXYZabcdef"
+                                     "ghijklmnopqrstuv"
+                                     "wxyz0123456789+/"
+                                     "=";
 
 /**
  * Parse user specified as a numeric UID or user name.
@@ -68,4 +78,82 @@ int util_decode_addr(const struct sockaddr *addr, socklen_t addrlen,
         break;
     }
     return snprintf(buffer, buflen, fmt, host, serv);
+}
+
+ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_t buflen)
+{
+    const unsigned char *dptr = data;
+    size_t reslen = 0;
+    uint32_t triplet = 0;
+    int cnt = 0;
+
+    for (; datalen > 0; datalen--)
+    {
+        triplet = (triplet << 8)|(*dptr++);
+        if (++cnt == 3)
+        {
+            if ((buflen - reslen) < 4)
+                return -1;
+            *buffer++ = BASE64_ALPHA[(triplet >> 18) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet >> 12) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet >>  6) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet      ) & 0x3F];
+            reslen += 4;
+            triplet = 0;
+            cnt = 0;
+        }
+    }
+    if (cnt != 0)
+    {
+        if ((buflen - reslen) < 4)
+            return -1;
+        if (cnt == 2)
+        {
+            *buffer++ = BASE64_ALPHA[(triplet >> 10) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet >>  4) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet <<  2) & 0x3F];
+            *buffer++ = BASE64_ALPHA[64];
+        }
+        else // if (cnt == 1)
+        {
+            *buffer++ = BASE64_ALPHA[(triplet >>  2) & 0x3F];
+            *buffer++ = BASE64_ALPHA[(triplet <<  4) & 0x3F];
+            *buffer++ = BASE64_ALPHA[64];
+            *buffer++ = BASE64_ALPHA[64];
+        }
+        reslen += 4;
+    }
+    return reslen;
+}
+
+ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
+{
+    unsigned char *rptr = buffer, ch;
+    size_t rlen = 0;
+    uint32_t prefix = 0;
+    int bits = 0;
+
+    // We don't actually test whether the original ecnoding was correct;
+    // we'd accept, e.g., "AAAA=!?" as a valid sequence for 3 zeros.
+    while (*text != '\0')
+    {
+        const char *cp = memchr(BASE64_ALPHA, *text++, 64);
+        if (cp == NULL)
+            return -1;
+        ch = (unsigned char)(cp - BASE64_ALPHA);
+        if (ch > 0x3F)
+            break;
+        prefix = (prefix << 6)|(ch & 0x3F);
+        if ((bits += 6) >= 8)
+        {
+            if (buflen <= rlen)
+                return -1;
+            *rptr++ = (prefix >> (bits - 8)) & 0xFF;
+            rlen++;
+            bits -= 8;
+        }
+    }
+    if ((prefix & ((1u << bits) - 1)) != 0)
+        return -1; // Padding bits are not zero
+    return rlen;
 }

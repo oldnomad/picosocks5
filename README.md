@@ -81,7 +81,8 @@ make && sudo make install
 picosocks5 -u nobody -g nogroup -a authfile.txt "*:1080"
 ```
 
-For more information on running PicoSOCKS5:
+For more information on running PicoSOCKS5 look up file [CONFIG.md](CONFIG.md).
+Short summary of options is also available from command line:
 
 ```bash
 picosocks5 --help

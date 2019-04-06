@@ -17,7 +17,10 @@ typedef int (*auth_callback_t)(const char *logprefix, int stage, auth_context_t 
 
 typedef struct {
     int method;
+    const char *name;
     auth_callback_t callback;
 } auth_method_t;
 
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);
+const auth_method_t *auth_find_method(const char *name);
+const auth_method_t *auth_all_methods(void);

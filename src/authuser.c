@@ -25,17 +25,19 @@ int authuser_append(int method, const char *username, const char *secret, size_t
 {
     struct authuser_container *u;
     char *uptr, *sptr;
-    size_t ulen = strlen(username) + 1;
+    size_t ulen = username == NULL ? 0 : (strlen(username) + 1);
 
     if ((u = malloc(sizeof(*u) + ulen + secretlen)) == NULL)
         return -1;
     uptr = u->data;
     sptr = &uptr[ulen];
     u->next = NULL;
-    u->user.method   = method;
-    u->user.username = uptr;
-    u->user.secret   = sptr;
-    memcpy(uptr, username, ulen);
+    u->user.method    = method;
+    u->user.username  = username == NULL ? NULL : uptr;
+    u->user.secret    = sptr;
+    u->user.secretlen = secretlen;
+    if (username != NULL)
+        memcpy(uptr, username, ulen);
     memcpy(sptr, secret, secretlen);
     if (USER_LIST == NULL)
         USER_LIST = u;
@@ -89,7 +91,21 @@ const authuser_t *authuser_find(int method, const char *username, const authuser
                 ((const char *)cur - offsetof(struct authuser_container, user));
         u = u->next;
     }
-    for (; u != NULL && (u->user.method != method ||
-                         strcmp(u->user.username, username) != 0); u = u->next);
+    for (; u != NULL &&
+           (u->user.method != method ||
+            u->user.username == NULL ||
+            strcmp(u->user.username, username) != 0); u = u->next);
+    return u == NULL ? NULL : &u->user;
+}
+
+/**
+ * Find server-side authenticator with specified method
+ */
+const authuser_t *authuser_find_server(int method)
+{
+    const struct authuser_container *u;
+
+    for (u = USER_LIST; u != NULL &&
+                        (u->user.method != method || u->user.username != NULL); u = u->next);
     return u == NULL ? NULL : &u->user;
 }
