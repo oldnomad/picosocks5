@@ -14,11 +14,13 @@ typedef struct {
 } auth_context_t;
 
 typedef int (*auth_callback_t)(const char *logprefix, int stage, auth_context_t *ctxt);
+typedef ssize_t (*auth_generator_t)(const char *secret, unsigned char *buffer, size_t bufsize);
 
 typedef struct {
     int method;
     const char *name;
     auth_callback_t callback;
+    auth_generator_t generator;
 } auth_method_t;
 
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);

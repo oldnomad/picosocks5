@@ -14,15 +14,16 @@ AC_PROG_CC_C99
 AC_PROG_INSTALL
 AS_IF([test "x$ac_cv_prog_cc_c99" = xno], [AC_MSG_ERROR([compiler must support C99 standard])])
 
-AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h unistd.h sys/socket.h])
+AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h])
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UID_T
 AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
-AC_CHECK_FUNCS([dup2 memchr memmove select socket strcasecmp strchr strrchr strtoul])
+AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strtoul])
 
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(crypt_r, [crypt])

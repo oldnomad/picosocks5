@@ -13,6 +13,7 @@
 #include "socks5.h"
 #include "authfile.h"
 #include "authuser.h"
+#include "crypto.h"
 #include "logger.h"
 #include "util.h"
 
@@ -435,6 +436,7 @@ int main(int argc, char **argv)
     sigaction(SIGINT,  &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    crypto_init();
     if ((nfds = socks_listen_at(CONFIG.listen_host, CONFIG.listen_service, &fds)) < 0)
         exit(1);
     if (CONFIG.nofork == 0)

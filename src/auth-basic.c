@@ -1,6 +1,7 @@
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <crypt.h>
@@ -9,6 +10,9 @@
 #include "authuser.h"
 #include "authmethod.h"
 #include "socks5bits.h"
+
+#define DEFAULT_SALT_SIZE 8 // Number of salt characters to generate
+static const char DEFAULT_SALT_PREFIX[] = "$6$"; // Default crypt(3) method
 
 /**
  * AUTH METHOD: User/password authentication (RFC 1929)
@@ -62,3 +66,41 @@ MALFORMED:
     ctxt->response_length = 2;
     return 0;
 }
+
+/**
+ * AUTH GENERATOR: Encrypt a password
+ */
+ssize_t auth_secret_basic(const char *password, unsigned char *buffer, size_t bufsize)
+{
+    static const char ALPHABET[] = "ABCDEFGHIJKLMNOP"
+                                   "QRSTUVWXYZabcdef"
+                                   "ghijklmnopqrstuv"
+                                   "wxyz0123456789/.";
+    struct crypt_data cdata;
+    char salt[sizeof(DEFAULT_SALT_PREFIX) + DEFAULT_SALT_SIZE + 1], *ep;
+    const char *cpass;
+    size_t csize;
+    int i;
+
+    strcpy(salt, DEFAULT_SALT_PREFIX);
+    ep = &salt[sizeof(DEFAULT_SALT_PREFIX) - 1];
+    for (i = 0; i < DEFAULT_SALT_SIZE; i++)
+        *ep++ = ALPHABET[rand() % 64];
+    *ep++ = '$';
+    *ep = '\0';
+    cpass = crypt_r(password, salt, &cdata);
+    if (cpass == NULL)
+    {
+        logger(LOG_ERR, "Encryption error: %m");
+        return -1;
+    }
+    csize = strlen(cpass);
+    if (bufsize < csize)
+    {
+        logger(LOG_ERR, "Encrypted password is too long");
+        return -1;
+    }
+    memcpy(buffer, cpass, csize);
+    return csize;
+}
+

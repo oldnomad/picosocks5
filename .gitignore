@@ -23,3 +23,4 @@ src/Makefile
 src/*.o
 src/.deps
 src/picosocks5
+src/pis5user

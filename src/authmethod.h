@@ -16,6 +16,9 @@
  * TO ADD A NEW AUTH METHOD:
  *
  * - Declare below a callback function with signature fitting auth_callback_t.
+ * - If the method supports passwords (secrets), declare below a secret
+ *   generator function with signature fitting auth_generator_t.
  * - Go to auth.c and insert an element into AUTH_METHODS[] array.
  */
 int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt);
+ssize_t auth_secret_basic(const char *password, unsigned char *buffer, size_t bufsize);

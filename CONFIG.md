@@ -126,3 +126,9 @@ Blowfish (prefix `$2a$`).
 
 For authentication method `chap`, the secret is a base64-encoded and
 prefixed with text `$base64$`.
+
+### Utility `pis5user`
+
+PicoSOCKS5 includes a utility, called `pis5user`, to help generate secrets
+for a `password`-format file. Utility generates secrets lines for specified
+user for all supported authentication methods.

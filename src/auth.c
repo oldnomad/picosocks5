@@ -11,10 +11,14 @@
  * List of supported methods, in preference decreasing order
  */
 static const auth_method_t AUTH_METHODS[] = {
-    { SOCKS_AUTH_BASIC,   "basic", auth_method_basic },
-    { SOCKS_AUTH_CHAP,    "chap",  NULL              },
-    { SOCKS_AUTH_NONE,    NULL,    NULL              },
-    { SOCKS_AUTH_INVALID, NULL,    NULL              }
+    { SOCKS_AUTH_BASIC,   "basic",
+      .callback  = auth_method_basic,
+      .generator = auth_secret_basic },
+    { SOCKS_AUTH_CHAP,    "chap",
+      .callback  = NULL,
+      .generator = NULL },
+    { SOCKS_AUTH_NONE,    NULL, NULL, NULL },
+    { SOCKS_AUTH_INVALID, NULL, NULL, NULL }
 };
 
 /**
