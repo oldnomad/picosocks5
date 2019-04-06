@@ -375,7 +375,7 @@ static void signal_handler(int signo)
 
     EXIT_SIGNO = signo;
     for (fd = 3; fd < FD_SETSIZE; fd++)
-        if (fcntl(fd, F_GETFL) != -1)
+        if (fcntl(fd, F_GETFD) != -1)
             close(fd);
 }
 
