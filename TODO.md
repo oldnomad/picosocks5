@@ -2,8 +2,8 @@
 
 ## CHAP authentication
 
-  - [ ] CHAP authentication method.
-  - [ ] Utility to generate secrets.
+  - [x] CHAP authentication method.
+  - [x] Utility to generate secrets.
 
 ## SOCKS-over-SSL
 
