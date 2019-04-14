@@ -50,6 +50,8 @@ MALFORMED:
         if (cpass != NULL && strcmp(cpass, u->secret) == 0)
             break;
     }
+    if (u == NULL)
+        return -1;
     ctxt->username = u->username;
 
     if (ctxt->response_maxlen < 2)
