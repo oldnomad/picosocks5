@@ -42,8 +42,7 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
                     const unsigned char *msg, size_t msglen,
                     unsigned char *res, size_t reslen)
 {
-    unsigned char *ukey = NULL, *ret;
-    ssize_t ulen;
+    unsigned char *ret;
     unsigned int rlen = reslen;
     unsigned long err;
 
@@ -54,8 +53,6 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
     }
     ret = HMAC(EVP_md5(), key, keylen, msg, msglen, res, &rlen);
     err = ERR_get_error();
-    if (ukey != NULL)
-        OPENSSL_clear_free(ukey, ulen);
     if (ret == NULL)
     {
         openssl_error(LOG_ERR, "HMAC-MD5 hash failed: %s", err);

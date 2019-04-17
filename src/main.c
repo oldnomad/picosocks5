@@ -367,7 +367,7 @@ static int process_option(const char *bin_name, int opt, const char *arg, int in
     return 0;
 }
 
-volatile sig_atomic_t EXIT_SIGNO = 0; // Signal that resulted in an abort
+static volatile sig_atomic_t EXIT_SIGNO = 0; // Signal that resulted in an abort
 
 static void signal_handler(int signo)
 {
