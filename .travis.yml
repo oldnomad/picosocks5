@@ -1,5 +1,0 @@
-language: c
-os: linux
-dist: xenial
-compiler: gcc
-script: autoreconf -f -i -Wall && ./configure && make

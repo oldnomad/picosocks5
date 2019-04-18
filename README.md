@@ -1,6 +1,4 @@
 # PicoSOCKS5: a lightweight and simple SOCKS5 proxy server
-[![Build Status](https://travis-ci.com/oldnomad/picosocks5.svg?branch=master)](https://travis-ci.com/oldnomad/picosocks5)
-
 [![pipeline status](https://gitlab.com/oldnomad/picosocks5/badges/master/pipeline.svg)](https://gitlab.com/oldnomad/picosocks5/commits/master)
 
 PicoSOCKS5 is a SOCKS5 proxy server cobbled together in less than 5 days of lazy coding.
