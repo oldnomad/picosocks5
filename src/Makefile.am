@@ -1,4 +1,4 @@
-AM_CFLAGS = -std=c99 -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
+AM_CFLAGS = -std=c99 -Wall -Wextra -pedantic -Wshadow -Wunused -Wuninitialized -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 sbin_PROGRAMS = picosocks5
 bin_PROGRAMS = pis5user
 
