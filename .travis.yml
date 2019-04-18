@@ -2,4 +2,6 @@ language: c
 os: linux
 dist: trusty
 compiler: gcc
+before_install:
+  - sudo apt-get install -y pkg-config libssl-dev
 script: autoreconf -f -i -Wall && ./configure && make
