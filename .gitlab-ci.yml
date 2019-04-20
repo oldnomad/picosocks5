@@ -2,6 +2,7 @@ image: debian:stable-slim
 
 stages:
   - build
+  - release
 
 build-proj:
   stage: build
@@ -15,3 +16,16 @@ build-proj:
     - autoreconf -f -i -Wall
     - ./configure
     - make
+
+package-proj:
+  stage: release
+  script:
+    - dpkg-buildpackage -us -uc
+    - mkdir build
+    - mv ../picosocks5*.deb build/
+  only:
+    - tags
+  artifacts:
+    name: "picosocks5-$CI_COMMIT_TAG"
+    paths:
+      - build/*
