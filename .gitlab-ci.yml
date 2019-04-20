@@ -20,6 +20,9 @@ build-proj:
 package-proj:
   stage: release
   script:
+    - apt-get update -qq
+    - apt-get install -y -qq build-essential autoconf automake pkg-config libssl-dev
+    - autoreconf -f -i -Wall
     - dpkg-buildpackage -us -uc
     - mkdir build
     - mv ../picosocks5*.deb build/
