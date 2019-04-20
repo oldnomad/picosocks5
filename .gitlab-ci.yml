@@ -16,6 +16,8 @@ build-proj:
     - autoreconf -f -i -Wall
     - ./configure
     - make
+  except:
+    - tags
 
 package-proj:
   stage: release
