@@ -1,0 +1,19 @@
+Source: picosocks5
+Section: contrib/net
+Priority: optional
+Maintainer: Alec Kojaev <alec.kojaev@gmail.com>
+Build-Depends: debhelper (>= 9), autotools-dev
+Standards-Version: 3.9.8
+Homepage: https://gitlab.com/oldnomad/picosocks5
+
+Package: picosocks5
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: lightweight and simple SOCKS5 proxy
+ PicoSOCKS5 is a lightweight and simple SOCKS5 proxy.
+ It supports only SOCKS5 (RFC 1928), with basic (username/password,
+ RFC 1929) or CHAP (draft-ietf-aft-socks-chap-01) authentication,
+ and has no complex limits or ACLs.
+ .
+ PicoSOCKS5 is recommended for simple setups without complex
+ permissions or high traffic volume.
