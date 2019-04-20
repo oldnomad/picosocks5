@@ -21,7 +21,7 @@ package-proj:
   stage: release
   script:
     - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake pkg-config libssl-dev
+    - apt-get install -y -qq build-essential autoconf automake pkg-config libssl-dev debhelper
     - autoreconf -f -i -Wall
     - dpkg-buildpackage -us -uc
     - mkdir build
