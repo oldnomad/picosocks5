@@ -7,7 +7,7 @@ stages:
 .build-common:
   before_script: &build_common_script
     - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake pandoc pkg-config libssl-dev
+    - apt-get install -y -qq build-essential autoconf automake debhelper pandoc pkg-config libssl-dev
     - autoconf --version
     - automake --version
     - gcc --version
