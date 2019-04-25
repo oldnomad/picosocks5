@@ -4,15 +4,19 @@ stages:
   - build
   - release
 
-build-proj:
-  stage: build
-  script:
+.build-common:
+  before_script: &build_common_script
     - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake pkg-config libssl-dev
+    - apt-get install -y -qq build-essential autoconf automake pandoc pkg-config libssl-dev
     - autoconf --version
     - automake --version
     - gcc --version
     - pkg-config --modversion libssl
+
+build-proj:
+  stage: build
+  before_script: *build_common_script
+  script:
     - autoreconf -f -i -Wall
     - ./configure
     - make
@@ -21,9 +25,8 @@ build-proj:
 
 package-proj:
   stage: release
+  before_script: *build_common_script
   script:
-    - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake pkg-config libssl-dev debhelper
     - autoreconf -f -i -Wall
     - dpkg-buildpackage -us -uc
     - mkdir build
