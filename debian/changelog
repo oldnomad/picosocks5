@@ -1,3 +1,9 @@
+picosocks5 (0.4) unstable; urgency=medium
+
+  * Supported release build for Debian.
+
+ -- Alec Kojaev <alec.kojaev@gmail.com>  Thu, 25 Apr 2019 23:15:43 +0300
+
 picosocks5 (0.3) unstable; urgency=medium
 
   * Initial Release.
