@@ -14,3 +14,11 @@ pis5user_SOURCES = pis5-user.c logger.c util.c \
 EXTRA_pis5user_SOURCES = crypto-openssl.c
 pis5user_LDADD = $(CRYPTO_MODULE)
 pis5user_DEPENDENCIES = $(CRYPTO_MODULE)
+
+man1_MANS = pis5user.man
+man8_MANS = picosocks5.man
+SUFFIXES =  .man .md
+CLEANFILES = *.man
+
+.md.man:
+	pandoc -s -t man -o $@ $<

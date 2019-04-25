@@ -24,6 +24,7 @@ src/*.o
 src/.deps
 src/picosocks5
 src/pis5user
+src/*.man
 
 # Debian build artefacts
 debian/.debhelper/
