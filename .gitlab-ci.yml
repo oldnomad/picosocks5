@@ -13,7 +13,7 @@ stages:
     - gcc --version
     - pkg-config --modversion libssl
 
-build-proj:
+test-build:
   stage: build
   before_script: *build_common_script
   script:
@@ -23,7 +23,7 @@ build-proj:
   except:
     - tags
 
-package-proj:
+debian-packages:
   stage: release
   before_script: *build_common_script
   script:
@@ -31,6 +31,9 @@ package-proj:
     - dpkg-buildpackage -us -uc
     - mkdir build
     - mv ../picosocks5*.deb build/
+    - mv ../picosocks5*.dsc build/
+    - mv ../picosocks5*.changes build/
+    - mv ../picosocks5*.buildinfo build/
   only:
     - tags
   artifacts:
