@@ -15,7 +15,7 @@ of the project.
 - PicoSOCKS5 implements SOCKS5 ([RFC 1928](https://www.ietf.org/rfc/rfc1928.txt)).
   The only request type currently implemented is CONNECT, but other request types
   may be implemented later. Earlier versions of SOCKS (SOCKS4, SOCKS4a) are not
-  implemented. Update [draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-pro-v5-05.txt)
+  implemented. Draft [SOCKS6](https://www.ietf.org/id/draft-olteanu-intarea-socks-6-06.txt)
   is not implemented.
 - PicoSOCKS5 implements username/password authentication for SOCKS5
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
