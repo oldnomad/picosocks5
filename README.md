@@ -24,7 +24,8 @@ of the project.
   including mutual authentication. This support requires additional library (OpenSSL).
 - PicoSOCKS5 supports incoming and outgoing connections both in IPv4 and IPv6.
   In particular, it can accept requests to connect to IPv6 servers from IPv4 clients,
-  and vice versa.
+  and vice versa, serving as a gateway for mechanism described in
+  [RFC 3089](https://www.ietf.org/rfc/rfc3089.txt).
 
 # Known disadvantages
 
