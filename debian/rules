@@ -17,6 +17,22 @@
 %:
 	dh $@ --with autotools_dev
 
+build:
+	dh_testdir
+	dh_update_autotools_config
+	dh_auto_configure -- --with-crypto=gnutls
+	dh_auto_build -- clean all
+	install -D -t debian/tmp-build/gnutls  src/picosocks5
+	dh_auto_configure -- --with-crypto=openssl
+	dh_auto_build -- clean all
+	install -D -t debian/tmp-build/openssl src/picosocks5
+	dh_auto_configure -- --without-crypto
+	dh_auto_build -- clean all
+	dh_auto_test
+
+override_dh_clean:
+	dh_clean
+	rm -rf debian/tmp-build
 
 # dh_make generated override targets
 # This is example for Cmake (See https://bugs.debian.org/641051 )

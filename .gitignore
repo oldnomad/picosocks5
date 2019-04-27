@@ -30,6 +30,12 @@ src/*.man
 debian/.debhelper/
 debian/debhelper-build-stamp
 debian/files
-debian/picosocks5.debhelper.log
-debian/picosocks5.substvars
+debian/*.debhelper.log
+debian/*.substvars
 debian/picosocks5/
+debian/picosocks5-gnutls/
+debian/picosocks5-minimal/
+debian/picosocks5-openssl/
+debian/picosocks5-utils/
+debian/tmp-build/
+debian/tmp/

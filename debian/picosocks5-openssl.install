@@ -1,0 +1,3 @@
+debian/tmp-build/openssl/picosocks5 usr/sbin/
+usr/share/man/man8/picosocks5.8
+usr/share/doc/picosocks5/*
