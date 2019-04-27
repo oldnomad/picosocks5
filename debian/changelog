@@ -1,3 +1,10 @@
+picosocks5 (0.5) unstable; urgency=medium
+
+  * Can now build with GnuTLS.
+  * Separated Debian binary packages.
+
+ -- Alec Kojaev <alec.kojaev@gmail.com>  Sat, 27 Apr 2019 21:51:23 +0300
+
 picosocks5 (0.4) unstable; urgency=medium
 
   * Supported release build for Debian.
