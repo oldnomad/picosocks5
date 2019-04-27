@@ -11,7 +11,7 @@ stages:
     - autoconf --version
     - automake --version
     - gcc --version
-    - pkg-config --modversion libgnutls
+    - pkg-config --modversion gnutls
     - pkg-config --modversion libssl
 
 test-build:
