@@ -7,10 +7,11 @@ stages:
 .build-common:
   before_script: &build_common_script
     - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake debhelper pandoc pkg-config libssl-dev
+    - apt-get install -y -qq build-essential autoconf automake debhelper pandoc pkg-config libgnutls-dev libssl-dev
     - autoconf --version
     - automake --version
     - gcc --version
+    - pkg-config --modversion libgnutls
     - pkg-config --modversion libssl
 
 test-build:
@@ -19,6 +20,10 @@ test-build:
   script:
     - autoreconf -f -i -Wall
     - ./configure
+    - make
+    - ./configure --without-gnutls
+    - make
+    - ./configure --without-gnutls --without-openssl
     - make
   except:
     - tags
