@@ -1,6 +1,7 @@
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
@@ -30,8 +31,7 @@ struct chap_data {
     unsigned char     challenge[CHALLENGE_LENGTH]; // Challenge sent to client
 };
 
-static unsigned char RESPONSE_ERROR[] = { 0x01, 1, SOCKS_CHAP_ATTR_STATUS, 1, 255 };
-
+#if HAVE_CRYPTO_HMACMD5
 static const authuser_t *chap_find_user(const char *logprefix, const unsigned char *user, size_t ulen)
 {
     // NOTE: ulen is guaranteed to be at most 255
@@ -46,12 +46,26 @@ static const authuser_t *chap_find_user(const char *logprefix, const unsigned ch
     return u;
 }
 
+static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
+{
+    static const unsigned char RESPONSE_ERROR[] = { 0x01, 1, SOCKS_CHAP_ATTR_STATUS, 1, 255 };
+    va_list args;
+
+    if (msg != NULL)
+    {
+        va_start(args, msg);
+        logger_vararg(prio, msg, args);
+        va_end(args);
+    }
+    ctxt->response = (unsigned char *)RESPONSE_ERROR;
+    ctxt->response_length = sizeof(RESPONSE_ERROR);
+}
+
 /**
  * AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
  */
 int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
 {
-#if HAVE_CRYPTO_HMACMD5
     struct chap_data *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
     size_t dlen, nattr, navas, alen, cresp_len = 0, cchal_len = 0;
@@ -101,17 +115,13 @@ ON_MALFORMED:
         case SOCKS_CHAP_ATTR_ALGO:
             if (chap->state != CHAP_ALGO)
             {
-                logger(LOG_WARNING, "<%s> CHAP algorithm offer out-of-order", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_WARNING, "<%s> CHAP algorithm offer out-of-order", logprefix);
                 return -1;
             }
             // We support only HMAC-MD5
             if (memchr(dptr, SOCKS_CHAP_ALGO_HMAC_MD5, alen) == NULL)
             {
-                logger(LOG_DEBUG, "<%s> CHAP algorithm negotiation failed", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_DEBUG, "<%s> CHAP algorithm negotiation failed", logprefix);
                 return -1;
             }
             chap->state = CHAP_GOT_ALGO;
@@ -120,17 +130,14 @@ ON_MALFORMED:
             u = chap_find_user(logprefix, dptr, alen);
             if (u == NULL)
             {
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, 0, NULL);
                 return -1;
             }
             if (chap->user != NULL)
             {
                 if (chap->user != u)
                 {
-                    logger(LOG_WARNING, "<%s> CHAP user renegotiation attempt", logprefix);
-                    ctxt->response = RESPONSE_ERROR;
-                    ctxt->response_length = sizeof(RESPONSE_ERROR);
+                    chap_error(ctxt, LOG_WARNING, "<%s> CHAP user renegotiation attempt", logprefix);
                     return -1;
                 }
                 break;
@@ -140,9 +147,7 @@ ON_MALFORMED:
         case SOCKS_CHAP_ATTR_RESPONSE:
             if (chap->state != CHAP_CHALLENGE)
             {
-                logger(LOG_WARNING, "<%s> CHAP response out-of-order", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_WARNING, "<%s> CHAP response out-of-order", logprefix);
                 return -1;
             }
             cresp = dptr;
@@ -152,9 +157,7 @@ ON_MALFORMED:
         case SOCKS_CHAP_ATTR_CHALLENGE:
             if (chap->state != CHAP_CHALLENGE && chap->state != CHAP_GOT_RESPONSE)
             {
-                logger(LOG_WARNING, "<%s> CHAP client challenge out-of-order", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_WARNING, "<%s> CHAP client challenge out-of-order", logprefix);
                 return -1;
             }
             cchal = dptr;
@@ -163,9 +166,7 @@ ON_MALFORMED:
         case SOCKS_CHAP_ATTR_STATUS:
             if (chap->state != CHAP_SERVER_AUTH)
             {
-                logger(LOG_WARNING, "<%s> CHAP status out-of-order", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_WARNING, "<%s> CHAP status out-of-order", logprefix);
                 return -1;
             }
             if (alen == 0)
@@ -174,9 +175,7 @@ ON_MALFORMED:
             if (alen != 0)
             {
 BAD_STATUS:
-                logger(LOG_WARNING, "<%s> CHAP client refused to authenticate us", logprefix);
-                ctxt->response = RESPONSE_ERROR;
-                ctxt->response_length = sizeof(RESPONSE_ERROR);
+                chap_error(ctxt, LOG_WARNING, "<%s> CHAP client refused to authenticate us", logprefix);
                 return -1;
             }
             chap->state = CHAP_DONE;
@@ -187,9 +186,7 @@ BAD_STATUS:
     }
     if (cchal != NULL && chap->state != CHAP_GOT_RESPONSE)
     {
-        logger(LOG_WARNING, "<%s> CHAP client challenge out-of-order", logprefix);
-        ctxt->response = RESPONSE_ERROR;
-        ctxt->response_length = sizeof(RESPONSE_ERROR);
+        chap_error(ctxt, LOG_WARNING, "<%s> CHAP client challenge out-of-order", logprefix);
         return -1;
     }
     switch (chap->state)
@@ -202,9 +199,7 @@ BAD_STATUS:
         // Length: 2 (prefix) + 3 (algo attr) + 2 (chal attr) + CHALLENGE_LENGTH
         if (ctxt->response_maxlen < (7 + CHALLENGE_LENGTH))
         {
-            logger(LOG_WARNING, "<%s> Buffer too small for CHAP", logprefix);
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, LOG_WARNING, "<%s> Buffer too small for CHAP", logprefix);
             return -1;
         }
         ctxt->response[0] = 0x01;
@@ -222,32 +217,25 @@ BAD_STATUS:
     case CHAP_GOT_RESPONSE: // Got response, send client auth status
         if (chap->user == NULL)
         {
-            logger(LOG_WARNING, "<%s> CHAP response without user ID", logprefix);
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, LOG_WARNING, "<%s> CHAP response without user ID", logprefix);
             return -1;
         }
         if (crypto_hmac_md5(chap->user->secret, chap->user->secretlen,
                             chap->challenge, sizeof(chap->challenge),
                             hash, CRYPTO_MD5_SIZE) != 0)
         {
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, 0, NULL);
             return -1;
         }
         if (cresp_len != CRYPTO_MD5_SIZE || memcmp(cresp, hash, CRYPTO_MD5_SIZE) != 0)
         {
-            logger(LOG_WARNING, "<%s> CHAP response doesn't match", logprefix);
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, LOG_WARNING, "<%s> CHAP response doesn't match", logprefix);
             return -1;
         }
         // Length: 2 (prefix) + 3 (status attr); optionally add 2 (resp attr) + hash size
         if (ctxt->response_maxlen < (7 + CRYPTO_MD5_SIZE))
         {
-            logger(LOG_WARNING, "<%s> Buffer too small for CHAP", logprefix);
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, LOG_WARNING, "<%s> Buffer too small for CHAP", logprefix);
             return -1;
         }
         ctxt->response[0] = 0x01;
@@ -261,17 +249,14 @@ BAD_STATUS:
         u = authuser_find_server(SOCKS_AUTH_CHAP);
         if (u == NULL)
         {
-            logger(LOG_WARNING, "<%s> CHAP client wants auth, but we don't have it", logprefix);
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, LOG_WARNING, "<%s> CHAP client wants auth, but we don't have it", logprefix);
             return -1;
         }
         if (crypto_hmac_md5(u->secret, u->secretlen,
                             cchal, cchal_len,
                             hash, CRYPTO_MD5_SIZE) != 0)
         {
-            ctxt->response = RESPONSE_ERROR;
-            ctxt->response_length = sizeof(RESPONSE_ERROR);
+            chap_error(ctxt, 0, NULL);
             return -1;
         }
         ctxt->response[1]++;
@@ -285,10 +270,19 @@ BAD_STATUS:
         return 0;
     }
     return 1;
-#else // !HAVE_CRYPTO_HMACMD5
-    return -1;
-#endif // HAVE_CRYPTO_HMACMD5
 }
+#else // !HAVE_CRYPTO_HMACMD5
+/**
+ * DISABLED AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
+ */
+int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
+{
+    (void)logprefix;
+    (void)stage;
+    (void)ctxt;
+    return -1;
+}
+#endif // HAVE_CRYPTO_HMACMD5
 
 /**
  * AUTH GENERATOR: Encode a password

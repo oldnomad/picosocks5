@@ -91,13 +91,10 @@ void logger_init(int nofork, int mode, int level)
         VERBOSITY = level;
 }
 
-void logger(int prio, const char *msg, ...)
+void logger_vararg(int prio, const char *msg, va_list args)
 {
-    va_list args;
-
     if (prio > VERBOSITY)
         return;
-    va_start(args, msg);
     if ((LOGMODE & LOGGER_SYSLOG) != 0)
         vsyslog(prio, msg, args);
     if ((LOGMODE & LOGGER_STDERR) != 0)
@@ -106,5 +103,13 @@ void logger(int prio, const char *msg, ...)
         putc('\n', stderr);
         fflush(stderr);
     }
+}
+
+void logger(int prio, const char *msg, ...)
+{
+    va_list args;
+
+    va_start(args, msg);
+    logger_vararg(prio, msg, args);
     va_end(args);
 }
