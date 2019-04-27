@@ -19,12 +19,12 @@ test-build:
   before_script: *build_common_script
   script:
     - autoreconf -f -i -Wall
-    - ./configure
-    - make
-    - ./configure --without-gnutls
-    - make
-    - ./configure --without-gnutls --without-openssl
-    - make
+    - ./configure --with-crypto=gnutls
+    - make clean all
+    - ./configure --with-crypto=openssl
+    - make clean all
+    - ./configure --without-crypto
+    - make clean all
   except:
     - tags
 
