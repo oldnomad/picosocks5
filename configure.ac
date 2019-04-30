@@ -17,6 +17,11 @@ AC_PROG_CC_C99
 AC_PROG_INSTALL
 AS_IF([test "x$ac_cv_prog_cc_c99" = xno],
       [AC_MSG_ERROR([compiler must support C99 standard])])
+AC_CHECK_PROG([PANDOC], [pandoc], [yes])
+AS_IF([test "x${PANDOC}" = xyes],
+      [],
+      [AC_MSG_WARN([pandoc not found, man pages will not be built])])
+AM_CONDITIONAL([HAVE_PANDOC], [test "x${PANDOC}" = xyes])
 
 AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h])
 AC_TYPE_SIZE_T
