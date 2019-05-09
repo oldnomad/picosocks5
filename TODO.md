@@ -12,7 +12,7 @@
   - [ ] SOCKS-over-SSL.
 
 ## Protocol features
-  - [ ] BIND.
+  - [x] BIND.
   - [ ] UDP ASSOCIATE and datagram relaying.
 
 ## General improvements

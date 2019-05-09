@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include "authfile.h"
 #include "authuser.h"
+#include "socks5.h"
 #include "logger.h"
 #include "util.h"
 #include "cmdline.h"
@@ -16,7 +17,7 @@
 
 #define DEFAULT_LISTEN_SERVICE "1080"
 
-static const char SHORT_OPTS[] = "c:a:Au:g:L:v:hV";
+static const char SHORT_OPTS[] = "c:a:AB:u:g:L:v:hV";
 static const struct option LONG_OPTS[] = {
     { "config",      1, NULL, 'c'  },
     { "nofork",      0, NULL, 1000 },
@@ -24,6 +25,7 @@ static const struct option LONG_OPTS[] = {
     { "loglevel",    1, NULL, 'v'  },
     { "auth",        1, NULL, 'a'  },
     { "anonymous",   0, NULL, 'A'  },
+    { "bind",        1, NULL, 'B'  },
     { "user",        1, NULL, 'u'  },
     { "group",       1, NULL, 'g'  },
     { "help",        0, NULL, 'h'  },
@@ -46,6 +48,13 @@ static const char OPTIONS_DESC[] =
     "    -A, --anonymous\n"
     "        Allow anonymous access even if there is a non-anonymous\n"
     "        method available.\n\n"
+    "    -B <address>, --bind <address>\n"
+    "        Specify external address to use for BIND and UDP ASSOCIATE\n"
+    "        commands. Address can be an IPv4 address, an IPv6 address,\n"
+    "        or a host name resolving to any set of IPv4 and IPv6\n"
+    "        addresses. Note that only the last specified address for\n"
+    "        each address family will be used. Default is no known external\n"
+    "        addresses.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
     "        Specify non-privileged user and group to use for daemon\n"
@@ -262,6 +271,10 @@ static int process_option(daemon_config_t *cfg, const char *prog_name, int opt, 
             authuser_anon_allow(value2bool(arg));
         else
             authuser_anon_allow(1);
+        break;
+    case 'B': // --bind=<address>
+        // TODO: Delay until the end to avoid logging problems
+        socks_set_bind_if(arg);
         break;
     case 'u': // --user=<uid>
         if ((cfg->drop_uid = util_parse_user(arg)) == (uid_t)-1)

@@ -29,6 +29,9 @@ typedef struct {
     unsigned char buffer[4096];     // I/O buffer
 } socks_state_t;
 
+static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
+static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
+
 /**
  * Build prefix for SOCKS log messages
  */
@@ -311,6 +314,187 @@ static void socks_process_data(socks_state_t *conn, int destfd)
 }
 
 /**
+ * Send a SOCKS5 reply.
+ */
+static int socks_send_reply(socks_state_t *conn, int errcode, const struct sockaddr *out)
+{
+    size_t len;
+
+    conn->buffer[0] = SOCKS_VERSION5;
+    conn->buffer[1] = errcode;
+    conn->buffer[2] = 0x00;
+    switch (out->sa_family)
+    {
+    default:
+        // We shouldn't be here, because 'out' is initialized
+        // from 'conn->localaddr'
+        logger(LOG_WARNING, "<%s> Invalid AF in response address", conn->logprefix);
+        return -1;
+    case AF_INET:
+        conn->buffer[3] = SOCKS_ADDR_IPV4;
+        memcpy(&conn->buffer[4],     &((const struct sockaddr_in *)out)->sin_addr.s_addr, 4);
+        memcpy(&conn->buffer[4 + 4], &((const struct sockaddr_in *)out)->sin_port,        2);
+        len = 10;
+        break;
+    case AF_INET6:
+        conn->buffer[3] = SOCKS_ADDR_IPV6;
+        memcpy(&conn->buffer[4],      &((const struct sockaddr_in6 *)out)->sin6_addr.s6_addr, 16);
+        memcpy(&conn->buffer[4 + 16], &((const struct sockaddr_in6 *)out)->sin6_port,          2);
+        len = 22;
+        break;
+    }
+    return socks_write(conn, conn->buffer, len);
+}
+
+/**
+ * Process SOCKS5 CONNECT command.
+ */
+static int socks_process_connect(socks_state_t *conn, int *destfd)
+{
+    int err;
+
+    logger(LOG_DEBUG, "<%s> Connecting...", conn->logprefix);
+    if ((*destfd = socket(conn->server.ss_family, SOCK_STREAM, 0)) == -1)
+    {
+        err = errno;
+        logger(LOG_WARNING, "<%s> Failed to open socket: %m", conn->logprefix);
+        return socks_errno2reply(err);
+    }
+    if (connect(*destfd, (const struct sockaddr *)&conn->server, sizeof(conn->server)) == -1)
+    {
+        err = errno;
+        logger(LOG_NOTICE, "<%s> Failed to connect: %m", conn->logprefix);
+        close(*destfd);
+        return socks_errno2reply(err);
+    }
+    logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
+    return SOCKS_ERR_SUCCESS;
+}
+
+/**
+ * Process SOCKS5 BIND command.
+ */
+static int socks_process_bind(socks_state_t *conn, struct sockaddr_storage *out, int *destfd)
+{
+    char srvhost[UTIL_ADDRSTRLEN + 1];
+    struct sockaddr_storage srv;
+    fd_set rfds, efds;
+    socklen_t slen;
+    int connfd = -1, err, nfds;
+
+    // NOTE: We could, perhaps, use DST to choose an interface to bind;
+    //       but it's hard to do portably, so we rely on the user to
+    //       specufy external addresses to use, one per address family.
+    switch (conn->server.ss_family)
+    {
+    case AF_INET:
+        srv = BIND_ADDRESS_IP4;
+        break;
+    case AF_INET6:
+        srv = BIND_ADDRESS_IP6;
+        break;
+    }
+    if (srv.ss_family == AF_UNSPEC)
+        return SOCKS_ERR_AF_UNSUPPORTED;
+    logger(LOG_DEBUG, "<%s> Binding...", conn->logprefix);
+    if ((connfd = socket(srv.ss_family, SOCK_STREAM, 0)) == -1)
+    {
+        err = errno;
+        logger(LOG_ERR, "<%s> Failed to open listening socket: %m", conn->logprefix);
+        return socks_errno2reply(err);
+    }
+    if (srv.ss_family == AF_INET6)
+    {
+        int val = 1;
+        setsockopt(connfd, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val));
+    }
+    if (bind(connfd, (const struct sockaddr *)&srv, sizeof(srv)) == -1)
+    {
+        err = errno;
+        logger(LOG_ERR, "<%s> Failed to bind listening socket: %m", conn->logprefix);
+ON_ERROR:
+        close(connfd);
+        return socks_errno2reply(err);
+    }
+    slen = sizeof(out);
+    if (getsockname(connfd, (struct sockaddr *)&srv, &slen) == -1)
+    {
+        err = errno;
+        logger(LOG_ERR, "<%s> Failed to get name of listening socket: %m", conn->logprefix);
+        goto ON_ERROR;
+    }
+    util_decode_addr((const struct sockaddr *)&srv, sizeof(srv), srvhost, sizeof(srvhost));
+    logger(LOG_DEBUG, "<%s> Waiting for connections on <%s>", conn->logprefix, srvhost);
+    if (listen(connfd, 1) == -1)
+    {
+        err = errno;
+        logger(LOG_ERR, "<%s> Failed to listen on listening socket: %m", conn->logprefix);
+        goto ON_ERROR;
+    }
+    if (socks_send_reply(conn, SOCKS_ERR_SUCCESS, (struct sockaddr *)&srv) < 0)
+    {
+        close(connfd);
+        return -1;
+    }
+    FD_ZERO(&rfds);
+    FD_SET(conn->socket, &rfds);
+    FD_SET(connfd, &rfds);
+    nfds = (conn->socket > connfd ? conn->socket : connfd) + 1;
+    efds = rfds;
+    do
+    {
+        err = select(nfds, &rfds, NULL, &efds, NULL);
+    }
+    while (err == 0);
+    if (err == -1)
+    {
+        err = errno;
+        logger(LOG_WARNING, "<%s> Error waiting for connection: %m", conn->logprefix);
+        goto ON_ERROR;
+    }
+    if (FD_ISSET(conn->socket, &rfds))
+    {
+        unsigned char b;
+        if (socks_read(conn, &b, 1) > 0)
+            logger(LOG_WARNING, "<%s> Extra data in control socket", conn->logprefix);
+        logger(LOG_DEBUG, "<%s> Closing binding channel", conn->logprefix);
+        close(connfd);
+        return -1;
+    }
+    if (FD_ISSET(conn->socket, &efds))
+    {
+        logger(LOG_DEBUG, "<%s> Exception on control socket", conn->logprefix);
+        close(connfd);
+        return -1;
+    }
+    if (FD_ISSET(connfd, &efds))
+    {
+        logger(LOG_DEBUG, "<%s> Exception on listening socket", conn->logprefix);
+        close(connfd);
+        return -1;
+    }
+    if ((*destfd = accept(connfd, NULL, NULL)) == -1)
+    {
+        err = errno;
+        logger(LOG_WARNING, "<%s> Error accepting connection: %m", conn->logprefix);
+        goto ON_ERROR;
+    }
+    close(connfd);
+    slen = sizeof(*out);
+    if (getpeername(*destfd, (struct sockaddr *)out, &slen) == -1)
+    {
+        err = errno;
+        logger(LOG_ERR, "<%s> Failed to get name of connected socket: %m", conn->logprefix);
+        close(*destfd);
+        goto ON_ERROR;
+    }
+    // TODO: We'd better check that connected host is the one in DST
+    conn->server = *out;
+    logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
+    return SOCKS_ERR_SUCCESS;
+}
+
+/**
  * Process SOCKS5 request
  */
 static int socks_process_request(socks_state_t *conn)
@@ -371,61 +555,26 @@ static int socks_process_request(socks_state_t *conn)
     conn->server = dst;
     switch (conn->buffer[1]) // CMD
     {
-    case SOCKS_CMD_BIND:
     case SOCKS_CMD_ASSOCIATE:
     default:
-        // NOTE: BIND and UDP ASSOCIATE/BIND are not implemented yet
+        // NOTE: UDP ASSOCIATE is not implemented yet
         logger(LOG_NOTICE, "<%s> Unknown command 0x%02X", conn->logprefix,
             conn->buffer[1]);
         errcode = SOCKS_ERR_CMD_UNSUPPORTED;
         break;
     case SOCKS_CMD_CONNECT:
         socks_logger_prefix(conn, "CONNECT");
-        logger(LOG_DEBUG, "<%s> Connecting...", conn->logprefix);
-        if ((destfd = socket(dst.ss_family, SOCK_STREAM, 0)) == -1)
-        {
-            int err = errno;
-            logger(LOG_WARNING, "<%s> Failed to open socket: %m", conn->logprefix);
-            errcode = socks_errno2reply(err);
-            break;
-        }
-        if (connect(destfd, (struct sockaddr *)&dst, sizeof(dst)) == -1)
-        {
-            int err = errno;
-            logger(LOG_NOTICE, "<%s> Failed to connect: %m", conn->logprefix);
-            close(destfd);
-            errcode = socks_errno2reply(err);
-            break;
-        }
-        logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
+        errcode = socks_process_connect(conn, &destfd);
+        break;
+    case SOCKS_CMD_BIND:
+        socks_logger_prefix(conn, "BIND");
+        errcode = socks_process_bind(conn, &out, &destfd);
+        if (errcode < 0)
+            return -1;
         break;
     }
 ON_ERROR:
-    conn->buffer[0] = SOCKS_VERSION5;
-    conn->buffer[1] = errcode;
-    conn->buffer[2] = 0x00;
-    switch (out.ss_family)
-    {
-    default:
-        // We shouldn't be here, because 'out' is initialized
-        // from 'conn->localaddr'; anyway, let's just preserve
-        // the original address.
-        logger(LOG_WARNING, "<%s> Invalid AF in response address", conn->logprefix);
-        break;
-    case AF_INET:
-        conn->buffer[3] = SOCKS_ADDR_IPV4;
-        memcpy(&conn->buffer[4],     &((struct sockaddr_in *)&out)->sin_addr.s_addr, 4);
-        memcpy(&conn->buffer[4 + 4], &((struct sockaddr_in *)&out)->sin_port,        2);
-        len = 10;
-        break;
-    case AF_INET6:
-        conn->buffer[3] = SOCKS_ADDR_IPV6;
-        memcpy(&conn->buffer[4],      &((struct sockaddr_in6 *)&out)->sin6_addr.s6_addr, 16);
-        memcpy(&conn->buffer[4 + 16], &((struct sockaddr_in6 *)&out)->sin6_port,          2);
-        len = 22;
-        break;
-    }
-    if (socks_write(conn, conn->buffer, len) < 0)
+    if (socks_send_reply(conn, errcode, (struct sockaddr *)&out) < 0)
         return -1;
     if (errcode != SOCKS_ERR_SUCCESS)
         return -1;
@@ -464,6 +613,61 @@ static void *socks_connection_thread(void *arg)
 }
 
 /**
+ * Set interface addresses to use for BIND and UDP ASSOCIATE commands.
+ */
+int socks_set_bind_if(const char *host)
+{
+    int ret;
+    struct addrinfo *addrlist = NULL, *ptr;
+    static const struct addrinfo hints = {
+        .ai_flags = AI_PASSIVE|AI_ADDRCONFIG,
+        .ai_socktype = SOCK_STREAM,
+        .ai_family = AF_UNSPEC,
+    };
+
+    if ((ret = getaddrinfo(host, NULL, &hints, &addrlist)) != 0)
+    {
+        logger(LOG_ERR, "Failed to resolve bind address: %s", gai_strerror(ret));
+        return -1;
+    }
+    for (ptr = addrlist; ptr != NULL; ptr = ptr->ai_next)
+    {
+        char hostaddr[UTIL_ADDRSTRLEN];
+        struct sockaddr_storage *ss;
+
+        switch (ptr->ai_family)
+        {
+        case AF_INET:
+            ss = &BIND_ADDRESS_IP4;
+            break;
+        case AF_INET6:
+            ss = &BIND_ADDRESS_IP6;
+            break;
+        default:
+            continue;
+        }
+        if (ptr->ai_addrlen > sizeof(*ss))
+        {
+            logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%d) for host '%s'",
+                ptr->ai_addrlen, sizeof(*ss), host);
+            exit(1);
+        }
+        if (ss->ss_family != AF_UNSPEC)
+        {
+            util_decode_addr((const struct sockaddr *)ss, sizeof(*ss), hostaddr, sizeof(hostaddr));
+            logger(LOG_INFO, "Binding disabled on address <%s>, overridden", hostaddr);
+        }
+        memset(ss, 0, sizeof(*ss));
+        memcpy(ss, ptr->ai_addr, ptr->ai_addrlen);
+        util_decode_addr(ptr->ai_addr, ptr->ai_addrlen, hostaddr, sizeof(hostaddr));
+        logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
+    }
+    freeaddrinfo(addrlist);
+    return 0;
+}
+
+
+/**
  * Listen at all addresses of given host, return parameters for select(3)
  */
 int socks_listen_at(const char *host, const char *service, fd_set *fds)
@@ -491,6 +695,8 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
         if ((sock = socket(ptr->ai_family, SOCK_STREAM, 0)) == -1)
         {
             logger(LOG_ERR, "Failed to open socket for address <%s>: %m", hostaddr);
+ON_ERROR:
+            freeaddrinfo(addrlist);
             return -1;
         }
         if (ptr->ai_family == AF_INET6)
@@ -503,12 +709,12 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
         if (bind(sock, ptr->ai_addr, ptr->ai_addrlen) == -1)
         {
             logger(LOG_ERR, "Failed to bind address <%s>: %m", hostaddr);
-            return -1;
+            goto ON_ERROR;
         }
         if (listen(sock, SOMAXCONN) == -1)
         {
             logger(LOG_ERR, "Failed to listen on address <%s>: %m", hostaddr);
-            return -1;
+            goto ON_ERROR;
         }
         logger(LOG_INFO, "Listening on address <%s>", hostaddr);
         FD_SET(sock, fds);

@@ -14,11 +14,11 @@ root of the project.
 # Supported features
 
 - PicoSOCKS5 implements SOCKS5 ([RFC 1928](https://www.ietf.org/rfc/rfc1928.txt)).
-  The only request type currently implemented is CONNECT, but other
-  request types may be implemented later. Earlier versions of SOCKS
-  (SOCKS4, SOCKS4a) are not implemented. Draft
-  [SOCKS6](https://www.ietf.org/id/draft-olteanu-intarea-socks-6-06.txt)
-  is not implemented.
+  Currently only CONNECT and BIND are supported, but UDP ASSOCIATE
+  may be implemented later. Earlier versions of SOCKS (SOCKS4, SOCKS4a)
+  are not implemented. Drafts [SOCKS5a](https://www.ietf.org/archive/id/draft-ietf-aft-socks-pro-v5-05.txt),
+  [SOCKS6](https://www.ietf.org/id/draft-olteanu-intarea-socks-6-06.txt),
+  and other enhancements are not implemented.
 - PicoSOCKS5 implements username/password authentication for SOCKS5
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
 - PicoSOCKS5 implements CHAP authentication for SOCKS5
@@ -34,7 +34,8 @@ root of the project.
 
 - PicoSOCKS5 has no limits on incoming connections, so it can be easily
   overwhelmed by a deliberate denial-of-service attack from client side.
-- There's no access control (any client can connect to any server).
+- There's no access control (any client that can access the proxy can
+  connect to any accessible server).
 - User list for authentication is kept in memory, so PicoSOCKS5 doesn't
   work well for really large number of users.
 - There's currently no support for GSS-API authentication method
@@ -44,6 +45,9 @@ root of the project.
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-ssl-00.txt)).
   I'll be grateful for any pointers about existing implementations of
   this protocol variant.
+- SOCKS5 BIND request support relies on "external" interface addresses
+  specified in daemon configuration. Automatic interface selection is
+  difficult to implement portably.
 
 # Building PicoSOCKS5
 
@@ -70,6 +74,8 @@ For building PicoSOCKS5 you'll need:
 
 - GNU Autoconf/Automake, and their dependencies. The project is built
   using automake version 1.15, but version 1.14 is also known to work.
+
+- If you want to build man pages, you'll also need [pandoc](https://pandoc.org/).
 
 First, get the latest sources and configure the project:
 
