@@ -8,6 +8,9 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#if HAVE_IFADDRS_H
+#include <ifaddrs.h>
+#endif // HAVE_IFADDRS_H
 #include <pthread.h>
 #include "socks5.h"
 #include "auth.h"
@@ -613,6 +616,51 @@ static void *socks_connection_thread(void *arg)
 }
 
 /**
+ * Set single interface address to use for BIND and UDP ASSOCIATE commands.
+ */
+static int socks_set_bind_ifaddr(const char *name, int family, unsigned *pmask,
+                                 const struct sockaddr *addr, int addrlen)
+{
+    struct sockaddr_storage *ss;
+    int deflen = 0;
+    unsigned m = 0;
+
+    switch (family)
+    {
+    case AF_INET:
+        ss = &BIND_ADDRESS_IP4;
+        deflen = sizeof(struct sockaddr_in);
+        m = 0x01;
+        break;
+    case AF_INET6:
+        ss = &BIND_ADDRESS_IP6;
+        deflen = sizeof(struct sockaddr_in6);
+        m = 0x02;
+        break;
+    default:
+        return -1;
+    }
+    if (addrlen == -1)
+        addrlen = deflen;
+    if (addrlen > (int)sizeof(*ss))
+    {
+        logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%d) for '%s'",
+            addrlen, sizeof(*ss), name);
+        exit(1);
+    }
+    if (ss->ss_family != AF_UNSPEC)
+    {
+        if (pmask != NULL && (*pmask & m) != 0)
+            return -1;
+    }
+    if (pmask != NULL)
+        *pmask |= m;
+    memset(ss, 0, sizeof(*ss));
+    memcpy(ss, addr, addrlen);
+    return 0;
+}
+
+/**
  * Set interface addresses to use for BIND and UDP ASSOCIATE commands.
  */
 int socks_set_bind_if(const char *host)
@@ -625,47 +673,58 @@ int socks_set_bind_if(const char *host)
         .ai_family = AF_UNSPEC,
     };
 
+#if HAVE_IFADDRS_SUPPORT
+    if (host != NULL && host[0] == '@')
+    {
+        struct ifaddrs *ifa_list = NULL;
+        const struct ifaddrs *ifa;
+        unsigned mask = 0;
+
+        if (getifaddrs(&ifa_list) != 0)
+        {
+            logger(LOG_ERR, "Failed to get list of interface addresses: %m");
+            return -1;
+        }
+        for (ifa = ifa_list; ifa != NULL; ifa = ifa->ifa_next)
+        {
+            if (strcmp(ifa->ifa_name, &host[1]) != 0 || ifa->ifa_addr == NULL)
+                continue;
+            socks_set_bind_ifaddr(host, ifa->ifa_addr->sa_family, &mask, ifa->ifa_addr, -1);
+        }
+        freeifaddrs(ifa_list);
+        if (mask == 0)
+            logger(LOG_WARNING, "No addresses found for interface '%s'", &host[1]);
+        return 0;
+    }
+#endif
     if ((ret = getaddrinfo(host, NULL, &hints, &addrlist)) != 0)
     {
         logger(LOG_ERR, "Failed to resolve bind address: %s", gai_strerror(ret));
         return -1;
     }
     for (ptr = addrlist; ptr != NULL; ptr = ptr->ai_next)
-    {
-        char hostaddr[UTIL_ADDRSTRLEN];
-        struct sockaddr_storage *ss;
-
-        switch (ptr->ai_family)
-        {
-        case AF_INET:
-            ss = &BIND_ADDRESS_IP4;
-            break;
-        case AF_INET6:
-            ss = &BIND_ADDRESS_IP6;
-            break;
-        default:
-            continue;
-        }
-        if (ptr->ai_addrlen > sizeof(*ss))
-        {
-            logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%d) for host '%s'",
-                ptr->ai_addrlen, sizeof(*ss), host);
-            exit(1);
-        }
-        if (ss->ss_family != AF_UNSPEC)
-        {
-            util_decode_addr((const struct sockaddr *)ss, sizeof(*ss), hostaddr, sizeof(hostaddr));
-            logger(LOG_INFO, "Binding disabled on address <%s>, overridden", hostaddr);
-        }
-        memset(ss, 0, sizeof(*ss));
-        memcpy(ss, ptr->ai_addr, ptr->ai_addrlen);
-        util_decode_addr(ptr->ai_addr, ptr->ai_addrlen, hostaddr, sizeof(hostaddr));
-        logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
-    }
+        socks_set_bind_ifaddr(host, ptr->ai_family, NULL, ptr->ai_addr, ptr->ai_addrlen);
     freeaddrinfo(addrlist);
     return 0;
 }
 
+/**
+ * Report which addresses we are using for BIND and UDP ASSOCIATE.
+ */
+void socks_show_bind_if()
+{
+    static const struct sockaddr_storage *LIST[] = { &BIND_ADDRESS_IP4, &BIND_ADDRESS_IP6, NULL };
+    char hostaddr[UTIL_ADDRSTRLEN];
+    const struct sockaddr_storage **ssp;
+
+    for (ssp = LIST; *ssp != NULL; ssp++)
+    {
+        if ((*ssp)->ss_family == AF_UNSPEC)
+            continue;
+        util_decode_addr((const struct sockaddr *)*ssp, sizeof(**ssp), hostaddr, sizeof(hostaddr));
+        logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
+    }
+}
 
 /**
  * Listen at all addresses of given host, return parameters for select(3)

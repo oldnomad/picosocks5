@@ -11,10 +11,14 @@ PicoSOCKS5 is licensed under GNU Generat Public License Version 3 (GPLv3).
 For full text of the license see file [LICENSE.txt](LICENSE.txt) in the
 root of the project.
 
+In addition, linking to and/or using OpenSSL is allowed. This additional
+permission is required since recent OpenSSL license is considered by some
+to be incompatible with GPL.
+
 # Supported features
 
 - PicoSOCKS5 implements SOCKS5 ([RFC 1928](https://www.ietf.org/rfc/rfc1928.txt)).
-  Currently only CONNECT and BIND are supported, but UDP ASSOCIATE
+  Currently only `CONNECT` and `BIND` are supported, but `UDP ASSOCIATE`
   may be implemented later. Earlier versions of SOCKS (SOCKS4, SOCKS4a)
   are not implemented. Drafts [SOCKS5a](https://www.ietf.org/archive/id/draft-ietf-aft-socks-pro-v5-05.txt),
   [SOCKS6](https://www.ietf.org/id/draft-olteanu-intarea-socks-6-06.txt),
@@ -45,7 +49,7 @@ root of the project.
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-ssl-00.txt)).
   I'll be grateful for any pointers about existing implementations of
   this protocol variant.
-- SOCKS5 BIND request support relies on "external" interface addresses
+- SOCKS5 `BIND` request support relies on "external" interface addresses
   specified in daemon configuration. Automatic interface selection is
   difficult to implement portably.
 
@@ -59,10 +63,12 @@ For building PicoSOCKS5 you'll need:
 - GLibc or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI
   extensions) and following GNU extensions:
 
-  - vsyslog(3).
-  - getopt_long(3).
-  - crypt_r(3) and algorithm extensions for crypt(3) family.
-  - Format specifier "%m" in printf(3) family.
+  - `vsyslog(3)`.
+  - `getopt_long(3)`.
+  - `crypt_r(3)` and algorithm extensions for crypt(3) family.
+  - Format specifier `"%m"` in `printf(3)` family.
+  - Optionally, `getifaddrs(3)`. The program will compile without it,
+    by when it's available, additional functionality is enabled.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.

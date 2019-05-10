@@ -59,10 +59,17 @@ Listen port can be a decimal number of a service name (see **services**(5)).
 `-B` _bind-address_, `--bind` _bind-address_
 :   Specify external address to use for *BIND* and *UDP ASSOCIATE* commands.
     Address can be an IPv4 address, an IPv6 address, or a host name
-    resolving to any set of IPv4 and IPv6 addresses. Note that only the last
-    specified address for each address family will be used. By default
-    no external addresses are specified, so commands requiring them are
-    disabled.
+    resolving to any set of IPv4 and IPv6 addresses. If program is compiled
+    with **getifaddrs**(3) support, bind address can be also specified as
+    an interface name with prefix "@" (for example, "@eth0"), in which case
+    addresses of specified interface (one for each address family) will be
+    used.
+
+    Note that only the last specified address for each address family will
+    be used.
+
+    By default no external addresses are specified, so commands requiring
+    them are disabled.
 
 `-u` _user_, `--user` _user_
 :   Drop privileges to specified user. User can be a user name or
