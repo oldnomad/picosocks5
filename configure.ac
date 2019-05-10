@@ -32,7 +32,7 @@ AC_TYPE_UINT32_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
-AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strtoul])
+AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strdup strtoul])
 
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(crypt_r, [crypt])
