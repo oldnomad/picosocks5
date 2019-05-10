@@ -10,7 +10,7 @@
 #define LOGGER_SYSLOG 0x0001
 #define LOGGER_STDERR 0x0002
 
-static int LOGMODE = LOGGER_SYSLOG;
+static int LOGMODE = LOGGER_STDERR; // Initial value before logger_init
 static int VERBOSITY = LOG_INFO;
 
 static const struct {
