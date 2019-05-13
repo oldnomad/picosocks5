@@ -491,7 +491,6 @@ ON_ERROR:
         close(*destfd);
         goto ON_ERROR;
     }
-    // TODO: We'd better check that connected host is the one in DST
     conn->server = *out;
     logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
     return SOCKS_ERR_SUCCESS;
@@ -559,6 +558,7 @@ static int socks_process_request(socks_state_t *conn)
     switch (conn->buffer[1]) // CMD
     {
     case SOCKS_CMD_ASSOCIATE:
+        // TODO: UDP ASSOCIATE not implemented yet.
     default:
         // NOTE: UDP ASSOCIATE is not implemented yet
         logger(LOG_NOTICE, "<%s> Unknown command 0x%02X", conn->logprefix,

@@ -273,7 +273,6 @@ static int process_option(daemon_config_t *cfg, const char *prog_name, int opt, 
             authuser_anon_allow(1);
         break;
     case 'B': // --bind=<address>
-        // TODO: Delay until the end to avoid logging problems
         socks_set_bind_if(arg);
         break;
     case 'u': // --user=<uid>
