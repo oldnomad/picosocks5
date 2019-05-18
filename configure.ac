@@ -1,4 +1,5 @@
 AC_INIT([picosocks5], m4_esyscmd_s([./version.sh]), [alec.kojaev@gmail.com])
+AC_MSG_NOTICE([detected version: AC_PACKAGE_VERSION])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
