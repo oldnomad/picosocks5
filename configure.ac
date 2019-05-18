@@ -1,4 +1,4 @@
-AC_INIT([picosocks5], [0.6], [alec.kojaev@gmail.com])
+AC_INIT([picosocks5], m4_esyscmd_s([./version.sh]), [alec.kojaev@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([

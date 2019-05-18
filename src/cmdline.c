@@ -13,7 +13,7 @@
 #include "util.h"
 #include "cmdline.h"
 
-#define FULL_VERSION_TEXT  PACKAGE_NAME " version " PACKAGE_VERSION " built on " __DATE__ " " __TIME__;
+#define FULL_VERSION_TEXT  PACKAGE_NAME " " PACKAGE_VERSION;
 
 #define DEFAULT_LISTEN_SERVICE "1080"
 
