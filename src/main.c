@@ -96,6 +96,7 @@ int main(int argc, char **argv)
         .sa_handler = signal_handler,
     };
 
+    CONFIG.progname = argv[0];
     cmdline_process(argc, argv, &CONFIG);
     logger_init(CONFIG.nofork, CONFIG.logmode, CONFIG.loglevel);
     sigemptyset(&sa.sa_mask);
