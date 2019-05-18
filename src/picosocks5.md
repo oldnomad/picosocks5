@@ -16,7 +16,7 @@ line option **--config**.
 
 Note that all command line parameters are processed in order in which
 they appera on command line, so parameters specified later will, as a
-ruke, override earlier ones. Exceptions to this rule are options
+rule, override earlier ones. Exceptions to this rule are options
 **--config** and **--auth**.
 
 The only non-option command line parameter specifies address and port
@@ -117,19 +117,31 @@ if parent PID is 1 (**init**(1)) or if **--nofork** is specified.
 
 # CONFIGURATION FILE
 
-Configuration file is a text file, each line of which can be either empty,
-or a line comment introduced by `"#"` character, or parameter name and
-parameter value separated by `"="` character. Leading and trailing
-whitespace is eliminated, but no whitespace is allowed around the
-separator. There is no quoting or escaping for either parameter values
-or parameter names.
+Configuration file is a text file, in common "INI-like" format.
+Empty lines are ignored. Leading and trailing whitespace in a line is ignored.
+Lines starting with `"#"` or `";"` character are ignored.
 
-Parameter names correspond to long names of options, without the `"--"`
-prefix. Options **--config**, **--help**, and **--version** are
-not allowed as configuration file parameters.
+Any non-ignored line is either a section header (a section title
+enclosed in brackets), or parameter name and parameter value separated
+by `"="` character. Whitespace around the separator is ignored.
+There is no quoting or escaping for parameter values, parameter names,
+or section names.
 
-Additional parameter name, **listen**, corresponds to listen specification
-(non-option command line parameter).
+Currently `picosocks5` doesn't support any configuration sections.
+
+For most configuration parameters, parameter name is the same as
+corresponding command line option, without the `"--"` prefix.
+Exceptions are:
+
+  * Command line options **--help** and **--version** have no
+    corresponding configuration parameters.
+  * Configuration parameter **include** corresponds to command
+    line option **--config**; that is, once this configuration
+    parameter is encountered, a configuration file specified in
+    it is immediately parsed before proceeding to the next
+    configuration parameter in this file.
+  * Configuration parameter **listen** corresponds to command
+    line positional parameter (listen specification).
 
 Parameter values correspond to values specified for options. Values for
 boolean options (**--anonymous** and **--nofork**) are interpreted as
