@@ -152,16 +152,36 @@ int ini_load(const char *filename, ini_section_cbk_t callback, void *context)
 
         if (opt->type == INI_TYPE_LIST)
         {
-            // TODO: Process comma-separated list
+            char *comma;
+
+            for (comma = sep; comma != NULL; )
+            {
+                sp = skip_space(&comma[1]);
+                comma = strchr(sp, ',');
+                if (comma == NULL)
+                    ep = last_space(sp, strlen(sp));
+                else
+                    ep = last_space(sp, comma - sp);
+                *ep = '\0';
+                if (opt->callback(&ctxt, opt, sp) != 0)
+                {
+                    ret = -1;
+                    break;
+                }
+            }
+            if (ret < 0)
+                break;
         }
-        sp = skip_space(&sep[1]);
-        ep = last_space(sp, strlen(sp));
-        *ep = '\0';
-        // NOTE: No special processing for boolean here
-        if (opt->callback(&ctxt, opt, sp) != 0)
+        else
         {
-            ret = -1;
-            break;
+            sp = skip_space(&sep[1]);
+            ep = last_space(sp, strlen(sp));
+            *ep = '\0';
+            if (opt->callback(&ctxt, opt, sp) != 0)
+            {
+                ret = -1;
+                break;
+            }
         }
     }
     if (ctxt.section != NULL)
@@ -182,7 +202,7 @@ int ini_args(int argc, char **argv, ini_section_cbk_t callback, void *context)
         .context  = context
     };
     const ini_option_t *optlist = NULL, *opt;
-    char *sopts, *optarea = NULL, *pp;
+    char *sopts, *optarea = NULL, *pp, *sp, *ep;
     struct option *lopts, *lp;
     size_t slen, llen;
     int ret = 0, val, idx;
@@ -265,7 +285,21 @@ int ini_args(int argc, char **argv, ini_section_cbk_t callback, void *context)
             }
             break;
         case INI_TYPE_LIST:
-            // TODO: Process comma-separated list
+            // NOTE: We use the fact that 'optarg' points to an element of 'argv',
+            //       so it's OK to modify it.
+            for (ep = sp = optarg; ep != NULL; sp = ep)
+            {
+                // Unlike INI-file parameters, we don't skip whitespace here
+                ep = strchr(sp, ',');
+                if (ep != NULL)
+                    *ep++ = '\0';
+                if (opt->callback(&ctxt, opt, sp) != 0)
+                {
+                    ret = -1;
+                    goto ON_ERROR;
+                }
+            }
+            break;
         default:
             if (opt->callback(&ctxt, opt, optarg) != 0)
             {
