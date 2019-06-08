@@ -45,10 +45,6 @@ to be incompatible with GPL.
 - There's currently no support for GSS-API authentication method
   ([RFC 1961](https://www.ietf.org/rfc/rfc1961.txt)), required for full
   SOCKS5 compliance.
-- There's currently no support for SOCKS-over-SSL
-  ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-ssl-00.txt)).
-  I'll be grateful for any pointers about existing implementations of
-  this protocol variant.
 - SOCKS5 `BIND` request support relies on "external" interface addresses
   specified in daemon configuration. Automatic interface selection is
   difficult to implement portably.
@@ -65,14 +61,14 @@ For building PicoSOCKS5 you'll need:
 
   - `vsyslog(3)`.
   - `getopt_long(3)`.
-  - `crypt_r(3)` and algorithm extensions for crypt(3) family.
+  - `crypt_r(3)` and algorithm extensions for `crypt(3)` family.
   - Format specifier `"%m"` in `printf(3)` family.
   - Optionally, `getifaddrs(3)`. The program will compile without it,
     by when it's available, additional functionality is enabled.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
-- If you want to enable CHAP authemtication method, you'll also need either
+- If you want to enable CHAP authentication method, you'll also need either
   GnuTLS or OpenSSL library. Following features are used:
 
   - Random bytes generation.

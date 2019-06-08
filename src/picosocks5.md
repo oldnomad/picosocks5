@@ -11,11 +11,11 @@
 # DESCRIPTION
 
 The **picosocks5(8)** command starts a SOCKS5 daemon with configuration
-specified on the command line or in configuration file given in command
+specified on the command line or in a configuration file given in command
 line option **--config**.
 
 Note that all command line parameters are processed in order in which
-they appera on command line, so parameters specified later will, as a
+they appear on command line, so parameters specified later will, as a
 rule, override earlier ones. Exceptions to this rule are options
 **--config** and **--auth**.
 
