@@ -20,7 +20,7 @@ enum {
 enum {
     SOCKS_CHAP_ATTR_STATUS    = 0x00, // Authentication status
     SOCKS_CHAP_ATTR_MESSAGE   = 0x01, // Text message
-    SOCKS_CHAP_ATTR_USERID    = 0x02, // Uaer ID
+    SOCKS_CHAP_ATTR_USERID    = 0x02, // User ID
     SOCKS_CHAP_ATTR_CHALLENGE = 0x03, // Challenge
     SOCKS_CHAP_ATTR_RESPONSE  = 0x04, // Response
     SOCKS_CHAP_ATTR_CHARSET   = 0x05, // Text charset
