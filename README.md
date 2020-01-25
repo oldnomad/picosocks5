@@ -1,9 +1,8 @@
 # PicoSOCKS5: a lightweight and simple SOCKS5 proxy server
 [![pipeline status](https://gitlab.com/oldnomad/picosocks5/badges/master/pipeline.svg)](https://gitlab.com/oldnomad/picosocks5/commits/master)
 
-PicoSOCKS5 is a SOCKS5 proxy server cobbled together in less than 5 days
-of lazy coding. It is written in pure C and by default uses no extra
-libraries besides GLibc.
+PicoSOCKS5 is a very simple and very lightweight SOCKS5 proxy server.
+It is written in pure C and by default uses no extra libraries besides GLibc.
 
 # License
 
@@ -27,7 +26,7 @@ to be incompatible with GPL.
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
 - PicoSOCKS5 implements CHAP authentication for SOCKS5
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-chap-01.txt)),
-  including mutual authentication. This support requires additional
+  including mutual authentication. This support requires additional crypto
   libraries (GnuTLS or OpenSSL).
 - PicoSOCKS5 supports incoming and outgoing connections both in IPv4 and
   IPv6. In particular, it can accept requests to connect to IPv6 servers
@@ -74,8 +73,9 @@ For building PicoSOCKS5 you'll need:
   - Random bytes generation.
   - MD5 hash and HMAC functions.
 
-- GNU Autoconf/Automake, and their dependencies. The project is built
-  using automake version 1.15, but version 1.14 is also known to work.
+- GNU Autoconf/Automake, and their dependencies. The project was built
+  initially using automake version 1.15, but version 1.14 is also known
+  to work.
 
 - If you want to build man pages, you'll also need [pandoc](https://pandoc.org/).
 
