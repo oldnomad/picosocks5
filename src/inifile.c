@@ -120,9 +120,9 @@ int ini_load(const char *filename, ini_section_cbk_t callback, void *context)
             }
             if (ctxt.section != NULL)
                 free(ctxt.section);
-            if ((ctxt.section = strdup(&sp[1])) == NULL)
+            if ((ctxt.section = strdup(sp)) == NULL)
             {
-                ini_error(&ctxt, "not enough memory for section name '%s'", &sp[1]);
+                ini_error(&ctxt, "not enough memory for section name '%s'", sp);
                 ret = -1;
                 break;
             }
