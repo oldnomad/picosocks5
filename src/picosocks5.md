@@ -53,7 +53,7 @@ Listen port can be a decimal number of a service name (see **services**(5)).
     per user and method pair.
 
 `-A`, `--anonymous`
-:   Allow amomymous access even if there are users in the authentication
+:   Allow anonymous access even if there are users in the authentication
     files.
 
 `-B` _bind-address_, `--bind` _bind-address_
@@ -113,7 +113,7 @@ Note also that if parent PID is 1, **--nofork** is the default.
 ## Note on --user and --group
 
 Privileges are not dropped if the daemon is not started by a superuser,
-if parent PID is 1 (**init**(1)) or if **--nofork** is specified.
+if parent PID is 1 (**init**(1)), or if **--nofork** is specified.
 
 # CONFIGURATION FILE
 
