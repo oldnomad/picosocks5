@@ -26,6 +26,7 @@ static int process_authfile (const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_anonymous(const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_listen   (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_bind     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+static int process_maxconn  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_group    (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_help     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -40,6 +41,7 @@ static const ini_option_t COMMON_SECTION[] = {
     { "anonymous", "anonymous", 'A', INI_TYPE_BOOLEAN, process_anonymous },
     { "listen",    NULL,          1, INI_TYPE_PLAIN,   process_listen    },
     { "bind",      "bind",      'B', INI_TYPE_PLAIN,   process_bind      },
+    { "maxconn",   "maxconn",     0, INI_TYPE_PLAIN,   process_maxconn   },
     { "user",      "user",      'u', INI_TYPE_PLAIN,   process_user      },
     { "group",     "group",     'g', INI_TYPE_PLAIN,   process_group     },
     { "=",         "help",      'h', INI_TYPE_BOOLEAN, process_help      },
@@ -51,7 +53,7 @@ static const char OPTIONS_DESC[] =
     //        1         2         3         4         5         7
     //23456789012345678901234567890123456789012345678901234567890123567890
     "Options:\n\n"
-    "    -c <config-file>\n"
+    "    -c <config-file>, --config <config-file>\n"
     "        Read options from specified configuration file.\n\n"
     "    -a [<format>:]<secrets-file>, --auth=[<format>:]<secrets-file>\n"
     "        Secrets file for authentication. If format is not\n"
@@ -64,6 +66,9 @@ static const char OPTIONS_DESC[] =
     "        commands. Note that only the last specified address for\n"
     "        each address family will be used. Default is no known\n"
     "        external addresses.\n\n"
+    "    --maxconn <number>\n"
+    "       Specify maximum number of concurrent client connections,\n"
+    "       or zero for no limit. Default is no limit.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
     "        Specify non-privileged user and group to use for daemon\n"
@@ -245,6 +250,24 @@ static int process_bind(const ini_context_t *ctxt, const ini_option_t *opt, cons
     (void)ctxt;
     (void)opt;
     socks_set_bind_if(value);
+    return 0;
+}
+
+static int process_maxconn(const ini_context_t *ctxt, const ini_option_t *opt, const char *value)
+{
+    char *ep;
+    unsigned long v;
+
+    (void)ctxt;
+    (void)opt;
+    ep = NULL;
+    v = strtoul(value, &ep, 0);
+    if (ep == NULL || *ep != '\0')
+    {
+        ini_error(ctxt, "invalid maximum connection number '%s'", value);
+        return -1;
+    }
+    socks_set_maxconn(v);
     return 0;
 }
 

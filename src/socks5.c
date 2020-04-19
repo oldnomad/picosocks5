@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#if HAVE_STDC_ATOMICS
+#include <stdatomic.h>
+#endif
 #include <syslog.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -34,6 +37,14 @@ typedef struct {
 
 static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
 static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
+static unsigned long MAX_CLIENT_CONN = 0;
+
+#if HAVE_STDC_ATOMICS
+static atomic_ulong CLIENT_CONN = 0;
+#else
+static pthread_mutex_t CLIENT_CONN_MUTEX = PTHREAD_MUTEX_INITIALIZER;
+static unsigned long CLIENT_CONN = 0;
+#endif
 
 /**
  * Build prefix for SOCKS log messages
@@ -72,6 +83,50 @@ static void socks_logger_prefix(socks_state_t *conn, const char *state)
     if (elen <= len)
         return;
     strcpy(ep, state);
+}
+
+/**
+ * Increment client connections counter.
+ */
+static inline void socks_client_conn_inc(void)
+{
+#if HAVE_STDC_ATOMICS
+    atomic_fetch_add_explicit(&CLIENT_CONN, 1, memory_order_relaxed);
+#else
+    pthread_mutex_lock(&CLIENT_CONN_MUTEX);
+    ++CLIENT_CONN;
+    pthread_mutex_unlock(&CLIENT_CONN_MUTEX);
+#endif
+}
+
+/**
+ * Decrement client connections counter.
+ */
+static inline void socks_client_conn_dec(void)
+{
+#if HAVE_STDC_ATOMICS
+    atomic_fetch_sub_explicit(&CLIENT_CONN, 1, memory_order_relaxed);
+#else
+    pthread_mutex_lock(&CLIENT_CONN_MUTEX);
+    --CLIENT_CONN;
+    pthread_mutex_unlock(&CLIENT_CONN_MUTEX);
+#endif
+}
+
+/**
+ * Get client connections counter.
+ */
+static inline unsigned long socks_client_conn(void)
+{
+#if HAVE_STDC_ATOMICS
+    return atomic_load_explicit(&CLIENT_CONN, memory_order_relaxed);
+#else
+    unsigned long v;
+    pthread_mutex_lock(&CLIENT_CONN_MUTEX);
+    v = CLIENT_CONN;
+    pthread_mutex_unlock(&CLIENT_CONN_MUTEX);
+    return v;
+#endif
 }
 
 /**
@@ -607,11 +662,13 @@ static void *socks_connection_thread(void *arg)
     addrlen = sizeof(conn.local);
     getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
 
+    socks_client_conn_inc();
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
     close(conn.socket);
     if (conn.authdata != NULL)
         free(conn.authdata);
+    socks_client_conn_dec();
     return NULL;
 }
 
@@ -727,6 +784,13 @@ void socks_show_bind_if()
 }
 
 /**
+ * Set maximum number of concurrent client connections, or zero for no limit.
+ */
+void socks_set_maxconn(unsigned long maxconn) {
+    MAX_CLIENT_CONN = maxconn;
+}
+
+/**
  * Listen at all addresses of given host, return parameters for select(3)
  */
 int socks_listen_at(const char *host, const char *service, fd_set *fds)
@@ -824,6 +888,12 @@ void socks_accept_loop(int nfds, const fd_set *fds)
             if ((rsock = accept(sock, NULL, NULL)) == -1)
             {
                 logger(LOG_WARNING, "Error accepting connection: %m");
+                continue;
+            }
+            if (MAX_CLIENT_CONN != 0 && socks_client_conn() >= MAX_CLIENT_CONN)
+            {
+                close(rsock);
+                logger(LOG_WARNING, "Too many connections, some are dropped");
                 continue;
             }
             if ((ret = pthread_create(&thr, &thr_attr, socks_connection_thread, (void *)(intptr_t)rsock)) != 0)

@@ -26,12 +26,13 @@ AM_CONDITIONAL([HAVE_PANDOC], [test "x${PANDOC}" = xyes])
 
 AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h],
                  [], [AC_MSG_ERROR([missing required header])])
-AC_CHECK_HEADERS([ifaddrs.h])
+AC_CHECK_HEADERS([ifaddrs.h stdatomic.h])
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UID_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
+AC_CHECK_TYPES([atomic_ulong], [], [], [[#include <stdatomic.h>]])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
@@ -40,6 +41,8 @@ AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrc
 AC_CHECK_FUNCS([getifaddrs])
 AS_IF([test "x$ac_cv_func_getifaddrs" = xyes],
       [AC_DEFINE([HAVE_IFADDRS_SUPPORT], [1], [Support interface names in bind options])])
+AS_IF([test "x$ac_cv_type_atomic_ulong" = xyes -a "x$ac_cv_header_stdatomic_h" = xyes],
+      [AC_DEFINE([HAVE_STDC_ATOMICS], [1], [Support thread counters])])
 
 AC_SEARCH_LIBS(pthread_create, [pthread],
                [], [AC_MSG_ERROR([missing pthread implementation])])
