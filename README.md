@@ -35,7 +35,7 @@ to be incompatible with GPL.
 
 # Known disadvantages
 
-- PicoSOCKS5 has no limits on incoming connections, so it can be easily
+- PicoSOCKS5 doesn't timeout idle incoming connections, so it can be easily
   overwhelmed by a deliberate denial-of-service attack from client side.
 - There's no access control (any client that can access the proxy can
   connect to any accessible server).
@@ -54,7 +54,8 @@ For building PicoSOCKS5 you'll need:
 
 - GCC compiler. Any version supporting C99 will do (v4.8.4 or newer is
   guaranteed to work). PicoSOCKS5 conforms to C99 standard, so it can be
-  ported to any compiler supporting it.
+  ported to any compiler supporting it; however, if C11 or later
+  is supported, some of newer features may be used.
 - GLibc or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI
   extensions) and following GNU extensions:
 

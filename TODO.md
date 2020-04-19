@@ -16,5 +16,7 @@
 ## General improvements
 
   - [ ] Limits and timeouts on connections.
+    - [x] Limit on number of concurrent connections.
+    - [ ] Timeout for idle connections.
   - [x] Configuration file.
   - [ ] ACL.

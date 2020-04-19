@@ -71,6 +71,10 @@ Listen port can be a decimal number of a service name (see **services**(5)).
     By default no external addresses are specified, so commands requiring
     them are disabled.
 
+`--maxconn` _number_
+:   Specify maximum number of concurrent client connections, or zero for
+    no limit. Default is 0 (no limit).
+
 `-u` _user_, `--user` _user_
 :   Drop privileges to specified user. User can be a user name or
     a numeric UID.
