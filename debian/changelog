@@ -1,3 +1,13 @@
+picosocks5 (0.7) unstable; urgency=medium
+
+  * Refactored INI file parser.
+  * Implemented specifying external address as an interface if
+    getifaddrs(3) is available.
+  * Implemented limit on number of concurrent client connections;
+    uses C11 atomics if available.
+
+ -- Alec Kojaev <alec@home.kojaev.name>  Sun, 19 Apr 2020 23:31:28 +0300
+
 picosocks5 (0.6) unstable; urgency=medium
 
   * Implemented BIND request.
