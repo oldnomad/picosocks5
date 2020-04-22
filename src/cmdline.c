@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,7 @@
 #define FULL_VERSION_TEXT  PACKAGE_NAME " " PACKAGE_VERSION;
 
 #define DEFAULT_LISTEN_SERVICE "1080"
+#define MAX_TIMEOUT_VALUE 3600.0 // seconds
 
 static int process_include  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_nofork   (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -27,6 +29,7 @@ static int process_anonymous(const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_listen   (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_bind     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_maxconn  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+static int process_timeout  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_group    (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_help     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -42,6 +45,7 @@ static const ini_option_t COMMON_SECTION[] = {
     { "listen",    NULL,          1, INI_TYPE_PLAIN,   process_listen    },
     { "bind",      "bind",      'B', INI_TYPE_PLAIN,   process_bind      },
     { "maxconn",   "maxconn",     0, INI_TYPE_PLAIN,   process_maxconn   },
+    { "timeout",   "timeout",     0, INI_TYPE_PLAIN,   process_timeout   },
     { "user",      "user",      'u', INI_TYPE_PLAIN,   process_user      },
     { "group",     "group",     'g', INI_TYPE_PLAIN,   process_group     },
     { "=",         "help",      'h', INI_TYPE_BOOLEAN, process_help      },
@@ -68,6 +72,9 @@ static const char OPTIONS_DESC[] =
     "        external addresses.\n\n"
     "    --maxconn <number>\n"
     "       Specify maximum number of concurrent client connections,\n"
+    "       or zero for no limit. Default is no limit.\n\n"
+    "    --timeout <number>[.<frac>]\n"
+    "       Specify read/write timeout (in seconds) for connections,\n"
     "       or zero for no limit. Default is no limit.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
@@ -268,6 +275,31 @@ static int process_maxconn(const ini_context_t *ctxt, const ini_option_t *opt, c
         return -1;
     }
     socks_set_maxconn(v);
+    return 0;
+}
+
+static int process_timeout(const ini_context_t *ctxt, const ini_option_t *opt, const char *value)
+{
+    char *ep;
+    double v;
+    time_t sec;
+    suseconds_t usec;
+
+    (void)ctxt;
+    (void)opt;
+    ep = NULL;
+    v = strtod(value, &ep);
+    if (ep == NULL || *ep != '\0' || v < 0 || !isfinite(v))
+    {
+        ini_error(ctxt, "invalid connection timeout '%s'", value);
+        return -1;
+    }
+    if (v > MAX_TIMEOUT_VALUE)
+        v = MAX_TIMEOUT_VALUE;
+    v += 0.0005; // +0.5 usec to round to nearest
+    sec = (time_t)v;
+    usec = (suseconds_t)(1000.0*(v - sec));
+    socks_set_timeout(sec, usec);
     return 0;
 }
 

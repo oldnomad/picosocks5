@@ -35,8 +35,6 @@ to be incompatible with GPL.
 
 # Known disadvantages
 
-- PicoSOCKS5 doesn't timeout idle incoming connections, so it can be easily
-  overwhelmed by a deliberate denial-of-service attack from client side.
 - There's no access control (any client that can access the proxy can
   connect to any accessible server).
 - User list for authentication is kept in memory, so PicoSOCKS5 doesn't

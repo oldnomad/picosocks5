@@ -75,6 +75,11 @@ Listen port can be a decimal number of a service name (see **services**(5)).
 :   Specify maximum number of concurrent client connections, or zero for
     no limit. Default is 0 (no limit).
 
+`--timeout` _float-number_
+:   Specify read/write timeout (in seconds) for all connections, or zero
+    for no limit. Default is 0 (no limit). Maximum timeout is 3600 seconds
+    (one hour), any value higher than that will be interpreted as 3600.
+
 `-u` _user_, `--user` _user_
 :   Drop privileges to specified user. User can be a user name or
     a numeric UID.

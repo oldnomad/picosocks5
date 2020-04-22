@@ -38,6 +38,7 @@ typedef struct {
 static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
 static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
 static unsigned long MAX_CLIENT_CONN = 0;
+static struct timeval IO_TIMEOUT = { 0, 0 };
 
 #if HAVE_STDC_ATOMICS
 static atomic_ulong CLIENT_CONN = 0;
@@ -86,6 +87,16 @@ static void socks_logger_prefix(socks_state_t *conn, const char *state)
 }
 
 /**
+ * Get a freshly allocated error string for error code.
+ */
+static char *socks_strerror(int err) {
+    char errbuf[1024] = "<unknown error>";
+
+    strerror_r(err, errbuf, sizeof(errbuf));
+    return strdup(errbuf);
+}
+
+/**
  * Increment client connections counter.
  */
 static inline void socks_client_conn_inc(void)
@@ -127,6 +138,17 @@ static inline unsigned long socks_client_conn(void)
     pthread_mutex_unlock(&CLIENT_CONN_MUTEX);
     return v;
 #endif
+}
+
+/**
+ * Set options for connection socket.
+ */
+static void socks_set_options(int sock) {
+    if (IO_TIMEOUT.tv_sec != 0 || IO_TIMEOUT.tv_usec != 0)
+    {
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT));
+    }
 }
 
 /**
@@ -346,24 +368,24 @@ static void socks_process_data(socks_state_t *conn, int destfd)
         {
             int err = 0;
             socklen_t errlen = sizeof(err);
-            char errbuf[256] = "";
+            char *errmsg;
 
             getsockopt(conn->socket, SOL_SOCKET, SO_ERROR, &err, &errlen);
-            strerror_r(err, errbuf, sizeof(errbuf));
-            logger(LOG_WARNING, "<%s> Client socket error: [%d] %s", conn->logprefix,
-                err, errbuf);
+            errmsg = socks_strerror(err);
+            logger(LOG_WARNING, "<%s> Client socket error: [%d] %s", conn->logprefix, err, errmsg);
+            free(errmsg);
             continue;
         }
         if (FD_ISSET(destfd, &efds))
         {
             int err = 0;
             socklen_t errlen = sizeof(err);
-            char errbuf[256] = "";
+            char *errmsg;
 
             getsockopt(destfd, SOL_SOCKET, SO_ERROR, &err, &errlen);
-            strerror_r(err, errbuf, sizeof(errbuf));
-            logger(LOG_WARNING, "<%s> Server socket error: [%d] %s", conn->logprefix,
-                err, errbuf);
+            errmsg = socks_strerror(err);
+            logger(LOG_WARNING, "<%s> Server socket error: [%d] %s", conn->logprefix, err, errmsg);
+            free(errmsg);
             continue;
         }
     }
@@ -418,6 +440,7 @@ static int socks_process_connect(socks_state_t *conn, int *destfd)
         logger(LOG_WARNING, "<%s> Failed to open socket: %m", conn->logprefix);
         return socks_errno2reply(err);
     }
+    socks_set_options(*destfd);
     if (connect(*destfd, (const struct sockaddr *)&conn->server, sizeof(conn->server)) == -1)
     {
         err = errno;
@@ -546,6 +569,7 @@ ON_ERROR:
         close(*destfd);
         goto ON_ERROR;
     }
+    socks_set_options(*destfd);
     conn->server = *out;
     logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
     return SOCKS_ERR_SUCCESS;
@@ -615,7 +639,6 @@ static int socks_process_request(socks_state_t *conn)
     case SOCKS_CMD_ASSOCIATE:
         // TODO: UDP ASSOCIATE not implemented yet.
     default:
-        // NOTE: UDP ASSOCIATE is not implemented yet
         logger(LOG_NOTICE, "<%s> Unknown command 0x%02X", conn->logprefix,
             conn->buffer[1]);
         errcode = SOCKS_ERR_CMD_UNSUPPORTED;
@@ -662,6 +685,7 @@ static void *socks_connection_thread(void *arg)
     addrlen = sizeof(conn.local);
     getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
 
+    socks_set_options(conn.socket);
     socks_client_conn_inc();
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
@@ -791,6 +815,15 @@ void socks_set_maxconn(unsigned long maxconn) {
 }
 
 /**
+ * Set socket recv/send timeout.
+ */
+void socks_set_timeout(time_t sec, suseconds_t usec) {
+    memset(&IO_TIMEOUT, 0, sizeof(IO_TIMEOUT));
+    IO_TIMEOUT.tv_sec = sec;
+    IO_TIMEOUT.tv_usec = usec;
+}
+
+/**
  * Listen at all addresses of given host, return parameters for select(3)
  */
 int socks_listen_at(const char *host, const char *service, fd_set *fds)
@@ -876,11 +909,12 @@ void socks_accept_loop(int nfds, const fd_set *fds)
             {
                 int err = 0;
                 socklen_t errlen = sizeof(err);
-                char errbuf[256] = "";
+                char *errmsg;
 
                 getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &errlen);
-                strerror_r(err, errbuf, sizeof(errbuf));
-                logger(LOG_WARNING, "Listen socket error: [%d] %s", err, errbuf);
+                errmsg = socks_strerror(err);
+                logger(LOG_WARNING, "Listen socket error: [%d] %s", err, errmsg);
+                free(errmsg);
                 continue;
             }
             if (!FD_ISSET(sock, &rfds))
@@ -898,10 +932,9 @@ void socks_accept_loop(int nfds, const fd_set *fds)
             }
             if ((ret = pthread_create(&thr, &thr_attr, socks_connection_thread, (void *)(intptr_t)rsock)) != 0)
             {
-                char errbuf[256] = "";
-
-                strerror_r(ret, errbuf, sizeof(errbuf));
-                logger(LOG_WARNING, "Failed to create connection thread: [%d] %s", ret, errbuf);
+                char *errmsg = socks_strerror(ret);
+                logger(LOG_WARNING, "Failed to create connection thread: [%d] %s", ret, errmsg);
+                free(errmsg);
                 close(rsock);
             }
         }

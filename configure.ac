@@ -36,7 +36,7 @@ AC_CHECK_TYPES([atomic_ulong], [], [], [[#include <stdatomic.h>]])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
-AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strdup strtoul],
+AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strdup strtod strtoul],
                [], [AC_MSG_ERROR([missing required function])])
 AC_CHECK_FUNCS([getifaddrs])
 AS_IF([test "x$ac_cv_func_getifaddrs" = xyes],
