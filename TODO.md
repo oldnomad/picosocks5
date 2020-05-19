@@ -20,3 +20,5 @@
     - [x] Timeout for idle connections.
   - [x] Configuration file.
   - [ ] ACL.
+    - [ ] Limit incoming addresses.
+    - [ ] Limit operations for specific users.
