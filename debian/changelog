@@ -1,3 +1,9 @@
+picosocks5 (0.9) unstable; urgency=medium
+
+  * Implemented limits on cient addresses.
+
+ -- Alec Kojaev <alec@home.kojaev.name>  Tue, 26 May 2020 14:13:54 +0300
+
 picosocks5 (0.8) unstable; urgency=medium
 
   * Implemented read/write timeout for all connections.
