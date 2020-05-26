@@ -6,7 +6,7 @@
 #include <string.h>
 #if HAVE_STDC_ATOMICS
 #include <stdatomic.h>
-#endif
+#endif // HAVE_STDC_ATOMICS
 #include <syslog.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -35,10 +35,18 @@ typedef struct {
     unsigned char buffer[4096];     // I/O buffer
 } socks_state_t;
 
+struct socks_acl_network {
+    struct socks_acl_network *next; // Pointer to next network
+    int allow;                      // Allow/deny flag
+    struct sockaddr_storage addr;   // Network address
+    unsigned bits;                  // Bitmask width
+};
+
 static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
 static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
 static unsigned long MAX_CLIENT_CONN = 0;
 static struct timeval IO_TIMEOUT = { 0, 0 };
+static struct socks_acl_network *ACL_NETWORKS[2] = { NULL, NULL };
 
 #if HAVE_STDC_ATOMICS
 static atomic_ulong CLIENT_CONN = 0;
@@ -138,6 +146,48 @@ static inline unsigned long socks_client_conn(void)
     pthread_mutex_unlock(&CLIENT_CONN_MUTEX);
     return v;
 #endif
+}
+
+/**
+ * Match an address against a network.
+ */
+static int socks_match_network(const struct sockaddr *addr,
+                               const struct sockaddr *netaddr, unsigned bits)
+{
+    if (addr->sa_family != netaddr->sa_family)
+        return 0;
+    switch (netaddr->sa_family)
+    {
+    case AF_INET:
+        if (bits <= 32)
+        {
+            in_addr_t a = ntohl(((const struct sockaddr_in *)addr)->sin_addr.s_addr);
+            in_addr_t n = ntohl(((const struct sockaddr_in *)netaddr)->sin_addr.s_addr);
+            unsigned b = 32 - bits;
+            return (a >> b) == (n >> b);
+        }
+        break;
+    case AF_INET6:
+        if (bits <= 128)
+        {
+            const struct in6_addr *a = &((const struct sockaddr_in6 *)addr)->sin6_addr;
+            const struct in6_addr *n = &((const struct sockaddr_in6 *)netaddr)->sin6_addr;
+            int oi;
+
+            for (oi = 0; bits >= 8 && oi < 16; oi++, bits -= 8)
+                if (a->s6_addr[oi] != n->s6_addr[oi])
+                    return 0;
+            if (bits == 0)
+                return 1;
+            if (oi < 16)
+            {
+                unsigned b = 8 - bits;
+                return (a->s6_addr[oi] >> b) == (n->s6_addr[oi] >> b);
+            }
+        }
+        break;
+    }
+    return 0;
 }
 
 /**
@@ -684,6 +734,39 @@ static void *socks_connection_thread(void *arg)
     getpeername(conn.socket, (struct sockaddr *)&conn.client, &addrlen);
     addrlen = sizeof(conn.local);
     getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
+    if (ACL_NETWORKS[0] != NULL)
+    {
+        const struct socks_acl_network *net;
+        int allow = 0;
+
+        for (net = ACL_NETWORKS[0]; net != NULL; net = net->next)
+            if (socks_match_network((const struct sockaddr *)&conn.client,
+                                    (const struct sockaddr *)&net->addr, net->bits))
+            {
+                if (net->allow)
+                    allow = 1;
+                break;
+            }
+        if (allow == 0)
+        {
+            char hostaddr[UTIL_ADDRSTRLEN + 1];
+            char netaddr[UTIL_ADDRSTRLEN + 8];
+
+            close(conn.socket);
+            util_decode_addr((const struct sockaddr *)&conn.client, sizeof(conn.client),
+                             hostaddr, sizeof(hostaddr));
+            if (net != NULL)
+                util_decode_network((const struct sockaddr *)&net->addr, sizeof(net->addr),
+                                    net->bits, netaddr, sizeof(netaddr));
+            else
+            {
+                netaddr[0] = '*';
+                netaddr[1] = '\0';
+            }
+            logger(LOG_WARNING, "Connection from disallowed address <%s> in network <%s>, dropped", hostaddr, netaddr);
+            return NULL;
+        }
+    }
 
     socks_set_options(conn.socket);
     socks_client_conn_inc();
@@ -790,24 +873,6 @@ int socks_set_bind_if(const char *host)
 }
 
 /**
- * Report which addresses we are using for BIND and UDP ASSOCIATE.
- */
-void socks_show_bind_if()
-{
-    static const struct sockaddr_storage *LIST[] = { &BIND_ADDRESS_IP4, &BIND_ADDRESS_IP6, NULL };
-    char hostaddr[UTIL_ADDRSTRLEN];
-    const struct sockaddr_storage **ssp;
-
-    for (ssp = LIST; *ssp != NULL; ssp++)
-    {
-        if ((*ssp)->ss_family == AF_UNSPEC)
-            continue;
-        util_decode_addr((const struct sockaddr *)*ssp, sizeof(**ssp), hostaddr, sizeof(hostaddr));
-        logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
-    }
-}
-
-/**
  * Set maximum number of concurrent client connections, or zero for no limit.
  */
 void socks_set_maxconn(unsigned long maxconn) {
@@ -821,6 +886,91 @@ void socks_set_timeout(time_t sec, suseconds_t usec) {
     memset(&IO_TIMEOUT, 0, sizeof(IO_TIMEOUT));
     IO_TIMEOUT.tv_sec = sec;
     IO_TIMEOUT.tv_usec = usec;
+}
+
+/**
+ * Add allowed or disallowed client network.
+ */
+int socks_add_client_network(int allow, const char *address, unsigned bits)
+{
+    struct socks_acl_network *net;
+    struct addrinfo *addrinfo;
+    struct sockaddr_storage addr = { .ss_family = AF_UNSPEC };
+    int ret;
+    static const struct addrinfo hints = {
+        .ai_flags = AI_ADDRCONFIG,
+        .ai_socktype = SOCK_STREAM,
+        .ai_family = AF_UNSPEC,
+    };
+
+    if ((ret = getaddrinfo(address, NULL, &hints, &addrinfo)) != 0)
+    {
+        logger(LOG_ERR, "Failed to resolve network address '%s': %s", address, gai_strerror(ret));
+        return -1;
+    }
+    if (addrinfo != NULL && addrinfo->ai_addrlen <= sizeof(addr))
+    {
+        memset(&addr, 0, sizeof(addr));
+        memcpy(&addr, addrinfo->ai_addr, addrinfo->ai_addrlen);
+    }
+    freeaddrinfo(addrinfo);
+    switch (addr.ss_family)
+    {
+    default:
+        logger(LOG_ERR, "Unknown network address '%s'", address);
+        return -1;
+    case AF_INET:
+        if (bits > 32)
+            bits = 32;
+        break;
+    case AF_INET6:
+        if (bits > 128)
+            bits = 128;
+        break;
+    }
+    if ((net = malloc(sizeof(*net))) == NULL)
+    {
+        logger(LOG_ERR, "Not enough memory for network ACLs");
+        return -1;
+    }
+    net->next = NULL;
+    net->allow = allow;
+    net->addr = addr;
+    net->bits = bits;
+    if (ACL_NETWORKS[1] == NULL)
+        ACL_NETWORKS[0] = net;
+    else
+        ACL_NETWORKS[1]->next = net;
+    ACL_NETWORKS[1] = net;
+    return 0;
+}
+
+
+/**
+ * Report configuration parameters.
+ */
+void socks_show_config()
+{
+    static const struct sockaddr_storage *LIST[] = { &BIND_ADDRESS_IP4, &BIND_ADDRESS_IP6, NULL };
+    char hostaddr[UTIL_ADDRSTRLEN + 8];
+    const struct sockaddr_storage **ssp;
+    const struct socks_acl_network *net;
+
+    for (ssp = LIST; *ssp != NULL; ssp++)
+    {
+        if ((*ssp)->ss_family == AF_UNSPEC)
+            continue;
+        util_decode_addr((const struct sockaddr *)*ssp, sizeof(**ssp), hostaddr, sizeof(hostaddr));
+        logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
+    }
+    logger(LOG_INFO, "Maximum concurrent connections = %u", MAX_CLIENT_CONN);
+    logger(LOG_INFO, "I/O timeout = %u.%03u sec", (unsigned)IO_TIMEOUT.tv_sec, (unsigned)IO_TIMEOUT.tv_usec);
+    for (net = ACL_NETWORKS[0]; net != NULL; net = net->next)
+    {
+        util_decode_network((const struct sockaddr *)&net->addr, sizeof(net->addr), net->bits,
+                            hostaddr, sizeof(hostaddr));
+        logger(LOG_INFO, "%s network <%s>", net->allow ? "Allowed" : "Disallowed", hostaddr);
+    }
 }
 
 /**

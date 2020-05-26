@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <ctype.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@ static int process_listen   (const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_bind     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_maxconn  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_timeout  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+static int process_networks (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_group    (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_help     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -46,6 +48,7 @@ static const ini_option_t COMMON_SECTION[] = {
     { "bind",      "bind",      'B', INI_TYPE_PLAIN,   process_bind      },
     { "maxconn",   "maxconn",     0, INI_TYPE_PLAIN,   process_maxconn   },
     { "timeout",   "timeout",     0, INI_TYPE_PLAIN,   process_timeout   },
+    { "network",   "network",     0, INI_TYPE_LIST,    process_networks  },
     { "user",      "user",      'u', INI_TYPE_PLAIN,   process_user      },
     { "group",     "group",     'g', INI_TYPE_PLAIN,   process_group     },
     { "=",         "help",      'h', INI_TYPE_BOOLEAN, process_help      },
@@ -76,6 +79,11 @@ static const char OPTIONS_DESC[] =
     "    --timeout <number>[.<frac>]\n"
     "       Specify read/write timeout (in seconds) for connections,\n"
     "       or zero for no limit. Default is no limit.\n\n"
+    "    --network [!]<address>[/<bits>],...\n"
+    "       Specify allowed and disallowed client networks.\n"
+    "       Note that networks are processed in list order until the\n"
+    "       first match, so if a subnetwork is disallowed within a larger\n"
+    "       allowed network, disallow rule should precede allow rule.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
     "        Specify non-privileged user and group to use for daemon\n"
@@ -300,6 +308,47 @@ static int process_timeout(const ini_context_t *ctxt, const ini_option_t *opt, c
     sec = (time_t)v;
     usec = (suseconds_t)(1000.0*(v - sec));
     socks_set_timeout(sec, usec);
+    return 0;
+}
+
+static int process_networks(const ini_context_t *ctxt, const ini_option_t *opt, const char *value)
+{
+    const char *sep, *addr, *rule = value;
+    char addrbuf[HOST_NAME_MAX + 1];
+    unsigned bits = UINT_MAX;
+    int allow = 1;
+
+    (void)ctxt;
+    (void)opt;
+    if (*rule == '!')
+    {
+        allow = 0;
+        ++rule;
+    }
+    sep = strrchr(rule, '/');
+    if (sep != NULL)
+    {
+        char *ep = NULL;
+        unsigned long v;
+        size_t alen;
+
+        v = strtoul(&sep[1], &ep, 10);
+        if (v < UINT_MAX && ep != NULL && ep != &sep[1] && *ep == '\0')
+            bits = (unsigned)v;
+        alen = (sep - rule);
+        if (alen >= sizeof(addrbuf))
+            alen = sizeof(addrbuf) - 1;
+        memcpy(addrbuf, rule, alen);
+        addrbuf[alen] = '\0';
+        addr = addrbuf;
+    }
+    else
+        addr = rule;
+    if (socks_add_client_network(allow, addr, bits) != 0)
+    {
+        ini_error(ctxt, "failed to add network rule '%s'", value);
+        return -1;
+    }
     return 0;
 }
 

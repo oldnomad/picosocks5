@@ -80,6 +80,18 @@ Listen port can be a decimal number of a service name (see **services**(5)).
     for no limit. Default is 0 (no limit). Maximum timeout is 3600 seconds
     (one hour), any value higher than that will be interpreted as 3600.
 
+`--network` [!]_address_[/_bits_],...
+:   Specify rules allowing and disallowing IPv4 or IPv6 networks for
+    incoming client connections.
+
+    Note that rules are processed in order until the first match, so if
+    a subnetwork has to be excluded from a larger allowed network,
+    disallow rule should precede allow rule.
+
+    By default all addresses are allowed. However, if at least one rule
+    (allow or disallow) is specified, an address is allowed only if it
+    has a matching allow rule.
+
 `-u` _user_, `--user` _user_
 :   Drop privileges to specified user. User can be a user name or
     a numeric UID.
@@ -123,6 +135,20 @@ Note also that if parent PID is 1, **--nofork** is the default.
 
 Privileges are not dropped if the daemon is not started by a superuser,
 if parent PID is 1 (**init**(1)), or if **--nofork** is specified.
+
+## Note on IPv4 and IPv6 addresses
+
+This program uses **getaddrinfo**(3) for host and network address
+parsing. As a result, in all places where an address is expected,
+following forms are accepted:
+
+  * A host name resolving to IPv4 and/or IPv6 addresses.
+  * Full decimal representation of IPv4 address (four dot-separated
+    decimal numbers).
+  * Any representation of IPv6 address.
+
+Alternative forms of IPv4 addresses (octal, hexadecimal, with fewer than four
+dot-separated elements) are not accepted.
 
 # CONFIGURATION FILE
 

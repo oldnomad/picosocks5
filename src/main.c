@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     crypto_init();
     if ((nfds = socks_listen_at(CONFIG.listen_host, CONFIG.listen_service, &fds)) < 0)
         exit(1);
-    socks_show_bind_if();
+    socks_show_config();
     if (CONFIG.nofork == 0)
         daemonize(CONFIG.drop_gid, CONFIG.drop_uid);
     logger(LOG_INFO, "Running %s", cmdline_version());
