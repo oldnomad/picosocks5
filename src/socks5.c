@@ -908,12 +908,15 @@ int socks_add_client_network(int allow, const char *address, unsigned bits)
         logger(LOG_ERR, "Failed to resolve network address '%s': %s", address, gai_strerror(ret));
         return -1;
     }
-    if (addrinfo != NULL && addrinfo->ai_addrlen <= sizeof(addr))
+    if (addrinfo != NULL)
     {
-        memset(&addr, 0, sizeof(addr));
-        memcpy(&addr, addrinfo->ai_addr, addrinfo->ai_addrlen);
+        if (addrinfo->ai_addrlen <= sizeof(addr))
+        {
+            memset(&addr, 0, sizeof(addr));
+            memcpy(&addr, addrinfo->ai_addr, addrinfo->ai_addrlen);
+        }
+        freeaddrinfo(addrinfo);
     }
-    freeaddrinfo(addrinfo);
     switch (addr.ss_family)
     {
     default:

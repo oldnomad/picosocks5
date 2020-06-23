@@ -54,9 +54,8 @@ MALFORMED:
         if (cpass != NULL && strcmp(cpass, u->secret) == 0)
             break;
     }
-    if (u == NULL)
-        return -1;
-    ctxt->username = u->username;
+    if (u != NULL)
+        ctxt->username = u->username;
 
     if (ctxt->response_maxlen < 2)
     {
@@ -66,7 +65,7 @@ MALFORMED:
     ctxt->response[0] = 0x01;
     ctxt->response[1] = u == NULL ? 0x01 : 0x00;
     ctxt->response_length = 2;
-    return 0;
+    return u == NULL ? -1 : 0;
 }
 
 /**

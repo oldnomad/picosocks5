@@ -134,7 +134,6 @@ int ini_load(const char *filename, ini_section_cbk_t callback, void *context)
             }
             continue;
         }
-        sep = strchr(sp, '=');
         if ((sep = strchr(sp, '=')) == NULL)
         {
             ini_error(&ctxt, "unseparated line");
