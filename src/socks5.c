@@ -524,6 +524,9 @@ static int socks_process_bind(socks_state_t *conn, struct sockaddr_storage *out,
     case AF_INET6:
         srv = BIND_ADDRESS_IP6;
         break;
+    default:
+        logger(LOG_ERR, "<%s> Unknown address family", conn->logprefix);
+        return SOCKS_ERR_AF_UNSUPPORTED;
     }
     if (srv.ss_family == AF_UNSPEC)
         return SOCKS_ERR_AF_UNSUPPORTED;
@@ -547,7 +550,7 @@ ON_ERROR:
         close(connfd);
         return socks_errno2reply(err);
     }
-    slen = sizeof(out);
+    slen = sizeof(srv);
     if (getsockname(connfd, (struct sockaddr *)&srv, &slen) == -1)
     {
         err = errno;
