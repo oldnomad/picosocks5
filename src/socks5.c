@@ -955,7 +955,7 @@ int socks_add_client_network(int allow, const char *address, unsigned bits)
 /**
  * Report configuration parameters.
  */
-void socks_show_config()
+void socks_show_config(void)
 {
     static const struct sockaddr_storage *LIST[] = { &BIND_ADDRESS_IP4, &BIND_ADDRESS_IP6, NULL };
     char hostaddr[UTIL_ADDRSTRLEN + 8];

@@ -247,6 +247,8 @@ static int process_listen(const ini_context_t *ctxt, const ini_option_t *opt, co
         serv = strdup(&sep[1]);
         if (serv == NULL)
         {
+            if (host != NULL)
+                free(host);
             ini_error(ctxt, "not enough memory for service: %s", value);
             return -1;
         }
