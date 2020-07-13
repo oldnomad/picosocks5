@@ -151,7 +151,7 @@ ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_
 
 ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
 {
-    unsigned char *rptr = buffer, ch;
+    unsigned char *rptr = buffer;
     size_t rlen = 0;
     uint32_t prefix = 0;
     int bits = 0;
@@ -161,6 +161,8 @@ ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
     while (*text != '\0')
     {
         const char *cp = memchr(BASE64_ALPHA, *text++, 65);
+        unsigned char ch;
+
         if (cp == NULL)
             return -1;
         ch = (unsigned char)(cp - BASE64_ALPHA);

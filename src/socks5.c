@@ -372,13 +372,13 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
  */
 static void socks_process_data(socks_state_t *conn, int destfd)
 {
-    fd_set rfds, efds;
-    int nfds, ret;
-    ssize_t len;
-
     socks_logger_prefix(conn, "DATA");
     for (;;)
     {
+        fd_set rfds, efds;
+        int nfds, ret;
+        ssize_t len;
+
         FD_ZERO(&rfds);
         FD_SET(conn->socket, &rfds);
         FD_SET(destfd, &rfds);
