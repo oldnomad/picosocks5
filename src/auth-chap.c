@@ -48,8 +48,6 @@ static const authuser_t *chap_find_user(const char *logprefix, const unsigned ch
 
 static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
 {
-    static const unsigned char RESPONSE_ERROR[] = { 0x01, 1, SOCKS_CHAP_ATTR_STATUS, 1, 255 };
-
     if (msg != NULL)
     {
         va_list args;
@@ -58,12 +56,16 @@ static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
         logger_vararg(prio, msg, args);
         va_end(args);
     }
-    if (ctxt->response_maxlen < sizeof(RESPONSE_ERROR))
+    if (ctxt->response_maxlen < 5)
         logger(LOG_ERR, "Buffer too small for error response");
     else
     {
-        memcpy(ctxt->response, RESPONSE_ERROR, sizeof(RESPONSE_ERROR));
-        ctxt->response_length = sizeof(RESPONSE_ERROR);
+        ctxt->response[0] = 0x01;
+        ctxt->response[1] = 1;
+        ctxt->response[2] = SOCKS_CHAP_ATTR_STATUS;
+        ctxt->response[3] = 1;
+        ctxt->response[4] = 255;
+        ctxt->response_length = 5;
     }
 }
 
