@@ -346,7 +346,7 @@ static int process_networks(const ini_context_t *ctxt, const ini_option_t *opt, 
     }
     else
         addr = rule;
-    if (socks_add_client_network(allow, addr, bits) != 0)
+    if (socks_add_client_network(ctxt->section, allow, addr, bits) != 0)
     {
         ini_error(ctxt, "failed to add network rule '%s'", value);
         return -1;

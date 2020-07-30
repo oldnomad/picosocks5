@@ -1,7 +1,9 @@
 int socks_set_bind_if(const char *host);
 void socks_set_maxconn(unsigned long maxconn);
 void socks_set_timeout(time_t sec, suseconds_t usec);
-int socks_add_client_network(int allow, const char *address, unsigned bits);
+
+int socks_add_client_network(const char *group, int allow, const char *address, unsigned bits);
+
 void socks_show_config(void);
 int socks_listen_at(const char *host, const char *service, fd_set *fds);
 void socks_accept_loop(int nfds, const fd_set *fds);

@@ -21,6 +21,17 @@
 #include "util.h"
 #include "socks5bits.h"
 
+struct socks_acl_network {
+    struct socks_acl_network *next; // Pointer to next network
+    int allow;                      // Allow/deny flag
+    struct sockaddr_storage addr;   // Network address
+    unsigned bits;                  // Bitmask width
+};
+
+struct socks_acl_set {
+    struct socks_acl_network *client_networks[2];
+};
+
 typedef struct {
     int socket;                     // Client socket
 
@@ -35,18 +46,13 @@ typedef struct {
     unsigned char buffer[4096];     // I/O buffer
 } socks_state_t;
 
-struct socks_acl_network {
-    struct socks_acl_network *next; // Pointer to next network
-    int allow;                      // Allow/deny flag
-    struct sockaddr_storage addr;   // Network address
-    unsigned bits;                  // Bitmask width
-};
-
 static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
 static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
 static unsigned long MAX_CLIENT_CONN = 0;
 static struct timeval IO_TIMEOUT = { 0, 0 };
-static struct socks_acl_network *ACL_NETWORKS[2] = { NULL, NULL };
+static struct socks_acl_set ACL_GLOBAL = {
+    .client_networks = { NULL, NULL }
+};
 
 #if HAVE_STDC_ATOMICS
 static atomic_ulong CLIENT_CONN = 0;
@@ -187,6 +193,27 @@ static int socks_match_network(const struct sockaddr *addr,
         }
         break;
     }
+    return 0;
+}
+
+/**
+ * Check client address against an ACL set.
+ */
+static int socks_acl_check_client_address(const struct socks_acl_set *set,
+                                          const struct sockaddr *addr,
+                                          const struct socks_acl_network **pnet) {
+    const struct socks_acl_network *net;
+
+    if (pnet != NULL)
+        *pnet = NULL;
+    if (set->client_networks[0] == NULL)
+        return 1;
+    for (net = set->client_networks[0]; net != NULL; net = net->next)
+        if (socks_match_network(addr, (const struct sockaddr *)&net->addr, net->bits)) {
+            if (pnet != NULL)
+                *pnet = net;
+            return net->allow;
+        }
     return 0;
 }
 
@@ -731,44 +758,32 @@ static void *socks_connection_thread(void *arg)
         .server    = { .ss_family = AF_UNSPEC },
         .logprefix = "",
     };
+    const struct socks_acl_network *net;
     socklen_t addrlen;
 
     addrlen = sizeof(conn.client);
     getpeername(conn.socket, (struct sockaddr *)&conn.client, &addrlen);
     addrlen = sizeof(conn.local);
     getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
-    if (ACL_NETWORKS[0] != NULL)
+    net = NULL;
+    if (socks_acl_check_client_address(&ACL_GLOBAL, (const struct sockaddr *)&conn.client, &net) == 0)
     {
-        const struct socks_acl_network *net;
-        int allow = 0;
+        char hostaddr[UTIL_ADDRSTRLEN + 1];
+        char netaddr[UTIL_ADDRSTRLEN + 8];
 
-        for (net = ACL_NETWORKS[0]; net != NULL; net = net->next)
-            if (socks_match_network((const struct sockaddr *)&conn.client,
-                                    (const struct sockaddr *)&net->addr, net->bits))
-            {
-                if (net->allow)
-                    allow = 1;
-                break;
-            }
-        if (allow == 0)
+        close(conn.socket);
+        util_decode_addr((const struct sockaddr *)&conn.client, sizeof(conn.client),
+                         hostaddr, sizeof(hostaddr));
+        if (net != NULL)
+            util_decode_network((const struct sockaddr *)&net->addr, sizeof(net->addr),
+                                net->bits, netaddr, sizeof(netaddr));
+        else
         {
-            char hostaddr[UTIL_ADDRSTRLEN + 1];
-            char netaddr[UTIL_ADDRSTRLEN + 8];
-
-            close(conn.socket);
-            util_decode_addr((const struct sockaddr *)&conn.client, sizeof(conn.client),
-                             hostaddr, sizeof(hostaddr));
-            if (net != NULL)
-                util_decode_network((const struct sockaddr *)&net->addr, sizeof(net->addr),
-                                    net->bits, netaddr, sizeof(netaddr));
-            else
-            {
-                netaddr[0] = '*';
-                netaddr[1] = '\0';
-            }
-            logger(LOG_WARNING, "Connection from disallowed address <%s> in network <%s>, dropped", hostaddr, netaddr);
-            return NULL;
+            netaddr[0] = '*';
+            netaddr[1] = '\0';
         }
+        logger(LOG_WARNING, "Connection from disallowed address <%s> in network <%s>, dropped", hostaddr, netaddr);
+        return NULL;
     }
 
     socks_set_options(conn.socket);
@@ -894,8 +909,9 @@ void socks_set_timeout(time_t sec, suseconds_t usec) {
 /**
  * Add allowed or disallowed client network.
  */
-int socks_add_client_network(int allow, const char *address, unsigned bits)
+int socks_add_client_network(const char *group, int allow, const char *address, unsigned bits)
 {
+    struct socks_acl_set *set;
     struct socks_acl_network *net;
     struct addrinfo *addrinfo;
     struct sockaddr_storage addr = { .ss_family = AF_UNSPEC };
@@ -906,6 +922,8 @@ int socks_add_client_network(int allow, const char *address, unsigned bits)
         .ai_family = AF_UNSPEC,
     };
 
+    (void)group;
+    set = &ACL_GLOBAL; // TODO: Find group by name
     if ((ret = getaddrinfo(address, NULL, &hints, &addrinfo)) != 0)
     {
         logger(LOG_ERR, "Failed to resolve network address '%s': %s", address, gai_strerror(ret));
@@ -943,11 +961,11 @@ int socks_add_client_network(int allow, const char *address, unsigned bits)
     net->allow = allow;
     net->addr = addr;
     net->bits = bits;
-    if (ACL_NETWORKS[1] == NULL)
-        ACL_NETWORKS[0] = net;
+    if (set->client_networks[1] == NULL)
+        set->client_networks[0] = net;
     else
-        ACL_NETWORKS[1]->next = net;
-    ACL_NETWORKS[1] = net;
+        set->client_networks[1]->next = net;
+    set->client_networks[1] = net;
     return 0;
 }
 
@@ -971,7 +989,7 @@ void socks_show_config(void)
     }
     logger(LOG_INFO, "Maximum concurrent connections = %u", MAX_CLIENT_CONN);
     logger(LOG_INFO, "I/O timeout = %u.%03u sec", (unsigned)IO_TIMEOUT.tv_sec, (unsigned)IO_TIMEOUT.tv_usec);
-    for (net = ACL_NETWORKS[0]; net != NULL; net = net->next)
+    for (net = ACL_GLOBAL.client_networks[0]; net != NULL; net = net->next)
     {
         util_decode_network((const struct sockaddr *)&net->addr, sizeof(net->addr), net->bits,
                             hostaddr, sizeof(hostaddr));
