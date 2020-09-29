@@ -97,7 +97,7 @@ static void socks_logger_prefix(socks_state_t *conn, const char *state)
     len = strlen(state);
     if (elen <= len)
         return;
-    strcpy(ep, state);
+    memcpy(ep, state, len + 1);
 }
 
 /**
@@ -369,7 +369,7 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
 
     if (dlen >= sizeof(hostname))
     {
-        logger(LOG_ERR, "<%s> FATAL: Domain length (%d) exceeds maximum (%d)", conn->logprefix,
+        logger(LOG_ERR, "<%s> FATAL: Domain length (%zd) exceeds maximum (%zd)", conn->logprefix,
             dlen, sizeof(hostname));
         exit(1);
     }
@@ -385,8 +385,8 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
     }
     if (list->ai_addrlen > sizeof(*dst))
     {
-        logger(LOG_ERR, "<%s> FATAL: Address length (%d) exceeds maximum (%d) for domain '%s'",
-            conn->logprefix, list->ai_addrlen, sizeof(*dst), hostname);
+        logger(LOG_ERR, "<%s> FATAL: Address length (%zd) exceeds maximum (%zd) for domain '%s'",
+            conn->logprefix, (size_t)list->ai_addrlen, sizeof(*dst), hostname);
         exit(1);
     }
     memcpy(dst, list->ai_addr, list->ai_addrlen);
@@ -682,7 +682,7 @@ static int socks_process_request(socks_state_t *conn)
     case SOCKS_ADDR_IPV4: // IPv4
         if (len < 10)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (IPv4 len %d)", conn->logprefix,
+            logger(LOG_WARNING, "<%s> Malformed request (IPv4 len %zd)", conn->logprefix,
                 len);
             return -1; // Not enough data for IPv4 address
         }
@@ -693,7 +693,7 @@ static int socks_process_request(socks_state_t *conn)
     case SOCKS_ADDR_DOMAIN: // Domain name
         if (len < 8 || conn->buffer[4] == 0 || (conn->buffer[4] + 7) > len)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (domain len %d/%d)", conn->logprefix,
+            logger(LOG_WARNING, "<%s> Malformed request (domain len %zd/%d)", conn->logprefix,
                 len, conn->buffer[4]);
             return -1; // Not enough data for domain name
         }
@@ -704,7 +704,7 @@ static int socks_process_request(socks_state_t *conn)
     case SOCKS_ADDR_IPV6: // IPv6
         if (len < 22)
         {
-            logger(LOG_WARNING, "<%s> Malformed request (IPv6 len %d)", conn->logprefix,
+            logger(LOG_WARNING, "<%s> Malformed request (IPv6 len %zd)", conn->logprefix,
                 len);
             return -1; // Not enough data for IPv6 address
         }
@@ -826,7 +826,7 @@ static int socks_set_bind_ifaddr(const char *name, int family, unsigned *pmask,
         addrlen = deflen;
     if (addrlen > (int)sizeof(*ss))
     {
-        logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%d) for '%s'",
+        logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%zd) for '%s'",
             addrlen, sizeof(*ss), name);
         exit(1);
     }
@@ -987,7 +987,7 @@ void socks_show_config(void)
         util_decode_addr((const struct sockaddr *)*ssp, sizeof(**ssp), hostaddr, sizeof(hostaddr));
         logger(LOG_INFO, "Binding enabled on address <%s>", hostaddr);
     }
-    logger(LOG_INFO, "Maximum concurrent connections = %u", MAX_CLIENT_CONN);
+    logger(LOG_INFO, "Maximum concurrent connections = %lu", MAX_CLIENT_CONN);
     logger(LOG_INFO, "I/O timeout = %u.%03u sec", (unsigned)IO_TIMEOUT.tv_sec, (unsigned)IO_TIMEOUT.tv_usec);
     for (net = ACL_GLOBAL.client_networks[0]; net != NULL; net = net->next)
     {

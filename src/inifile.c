@@ -50,6 +50,7 @@ static const ini_option_t *findopt_by_optchar(const ini_option_t *optlist, char 
 /**
  * Report error in INI-file or command line parsing.
  */
+__attribute__(( __format__(__printf__, 2, 3) ))
 void ini_error(const ini_context_t *ctxt, const char *fmt, ...)
 {
     va_list args;

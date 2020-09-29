@@ -83,7 +83,7 @@ ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
     size_t csize;
     int i;
 
-    strcpy(salt, DEFAULT_SALT_PREFIX);
+    memcpy(salt, DEFAULT_SALT_PREFIX, sizeof(DEFAULT_SALT_PREFIX) - 1);
     ep = &salt[sizeof(DEFAULT_SALT_PREFIX) - 1];
     for (i = 0; i < DEFAULT_SALT_SIZE; i++)
         *ep++ = ALPHABET[rand() % 64];
