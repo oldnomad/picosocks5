@@ -50,7 +50,7 @@ AC_SEARCH_LIBS(crypt_r, [crypt],
                [], [AC_MSG_ERROR([missing crypt_r implementation])])
 
 CRYPTO_LIBS=
-CRYPTO_MODULE=
+CRYPTO_MODULE="crypto-emul.\$(OBJEXT)"
 CRYPTO_HMACMD5=
 AS_IF([test -z "$CRYPTO_LIBS" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xgnutls \)],
       [AC_CHECK_LIB([gnutls], [gnutls_check_version],

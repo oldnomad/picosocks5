@@ -5,13 +5,13 @@ bin_PROGRAMS = pis5user
 picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c socks5.c \
     auth.c authuser.c auth-basic.c auth-chap.c \
     authfile.c authfile-password.c
-EXTRA_picosocks5_SOURCES = crypto-gnutls.c crypto-openssl.c
+EXTRA_picosocks5_SOURCES = crypto-gnutls.c crypto-openssl.c crypto-emul.c
 picosocks5_LDADD = $(CRYPTO_MODULE)
 picosocks5_DEPENDENCIES = $(CRYPTO_MODULE)
 
 pis5user_SOURCES = pis5-user.c logger.c util.c \
     auth.c authuser.c auth-basic.c auth-chap.c
-EXTRA_pis5user_SOURCES = crypto-gnutls.c crypto-openssl.c
+EXTRA_pis5user_SOURCES = crypto-gnutls.c crypto-openssl.c crypto-emul.c
 pis5user_LDADD = $(CRYPTO_MODULE)
 pis5user_DEPENDENCIES = $(CRYPTO_MODULE)
 
