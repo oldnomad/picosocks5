@@ -28,7 +28,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
 Provides: picosocks5
 Conflicts: picosocks5
-Recommends: picosocks5-urils
+Recommends: picosocks5-utils
 Description: lightweight and simple SOCKS5 proxy
  PicoSOCKS5 is a lightweight and simple SOCKS5 proxy.
  It supports only SOCKS5 (RFC 1928), with basic (username/password,
@@ -46,7 +46,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
 Provides: picosocks5
 Conflicts: picosocks5
-Recommends: picosocks5-urils
+Recommends: picosocks5-utils
 Description: lightweight and simple SOCKS5 proxy
  PicoSOCKS5 is a lightweight and simple SOCKS5 proxy.
  It supports only SOCKS5 (RFC 1928), with basic (username/password,
@@ -64,7 +64,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
 Provides: picosocks5
 Conflicts: picosocks5
-Recommends: picosocks5-urils
+Recommends: picosocks5-utils
 Description: lightweight and simple SOCKS5 proxy
  PicoSOCKS5 is a lightweight and simple SOCKS5 proxy.
  It supports only SOCKS5 (RFC 1928), with basic (username/password,
