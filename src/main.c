@@ -67,12 +67,12 @@ static void daemonize(uid_t uid, gid_t gid)
         return;
     if (gid != (gid_t)-1 && setgid(gid) != 0)
     {
-        logger(LOG_ERR, "Failed to set GID %d: %m", gid);
+        logger(LOG_ERR, "Failed to set GID %u: %m", gid);
         exit(1);
     }
     if (uid != (uid_t)-1 && setuid(uid) != 0)
     {
-        logger(LOG_ERR, "Failed to set UID %d: %m", uid);
+        logger(LOG_ERR, "Failed to set UID %u: %m", uid);
         exit(1);
     }
 }

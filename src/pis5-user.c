@@ -152,7 +152,6 @@ int main(int argc, char **argv)
     logger_init(1, 0, LOG_WARNING);
     if (ask_password(password, sizeof(password)) < 0)
         return 1;
-    srand(time(NULL));
     crypto_init();
     for (m = auth_all_methods(); m->method != SOCKS_AUTH_INVALID; m++)
     {

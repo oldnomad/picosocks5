@@ -288,7 +288,7 @@ static int socks_negotiate_method(socks_state_t *conn)
         return -1;
     }
     logger(LOG_DEBUG, "<%s> Negotiated authentication method 0x%02X", conn->logprefix,
-        method->method);
+        (unsigned)method->method);
     if (method->callback == NULL)
         return 0;
 
@@ -369,7 +369,7 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
 
     if (dlen >= sizeof(hostname))
     {
-        logger(LOG_ERR, "<%s> FATAL: Domain length (%zd) exceeds maximum (%zd)", conn->logprefix,
+        logger(LOG_ERR, "<%s> FATAL: Domain length (%zu) exceeds maximum (%zu)", conn->logprefix,
             dlen, sizeof(hostname));
         exit(1);
     }
@@ -385,7 +385,7 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
     }
     if (list->ai_addrlen > sizeof(*dst))
     {
-        logger(LOG_ERR, "<%s> FATAL: Address length (%zd) exceeds maximum (%zd) for domain '%s'",
+        logger(LOG_ERR, "<%s> FATAL: Address length (%zu) exceeds maximum (%zu) for domain '%s'",
             conn->logprefix, (size_t)list->ai_addrlen, sizeof(*dst), hostname);
         exit(1);
     }
@@ -826,7 +826,7 @@ static int socks_set_bind_ifaddr(const char *name, int family, unsigned *pmask,
         addrlen = deflen;
     if (addrlen > (int)sizeof(*ss))
     {
-        logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%zd) for '%s'",
+        logger(LOG_ERR, "FATAL: Address length (%d) exceeds maximum (%zu) for '%s'",
             addrlen, sizeof(*ss), name);
         exit(1);
     }

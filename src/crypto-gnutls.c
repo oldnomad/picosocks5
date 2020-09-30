@@ -8,11 +8,6 @@
 #include "crypto.h"
 #include "logger.h"
 
-static void report_error(int prio, const char *fmt, int err)
-{
-    logger(prio, fmt, gnutls_strerror(err));
-}
-
 void crypto_init(void)
 {
     if (gnutls_global_init() != 0)
@@ -27,7 +22,7 @@ void crypto_generate_nonce(unsigned char *buffer, size_t buflen)
     int err = gnutls_rnd(GNUTLS_RND_NONCE, buffer, buflen);
     if (err != 0)
     {
-        report_error(LOG_ERR, "FATAL: Failed to get random data: %s", err);
+        logger(LOG_ERR, "FATAL: Failed to get random data: %s", gnutls_strerror(err));
         exit(1);
     }
 }
@@ -46,7 +41,7 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
     err = gnutls_hmac_fast(GNUTLS_MAC_MD5, key, keylen, msg, msglen, res);
     if (err != 0)
     {
-        report_error(LOG_ERR, "HMAC-MD5 hash failed: %s", err);
+        logger(LOG_ERR, "HMAC-MD5 hash failed: %s", gnutls_strerror(err));
         return -1;
     }
     return 0;

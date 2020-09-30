@@ -64,20 +64,11 @@ int util_decode_addr(const struct sockaddr *addr, socklen_t addrlen,
                      char *buffer, size_t bufsize)
 {
     char host[INET6_ADDRSTRLEN + 1] = "???", serv[16] = "?";
-    const char *fmt;
 
     getnameinfo(addr, addrlen, host, sizeof(host), serv, sizeof(serv),
                 NI_NUMERICHOST|NI_NUMERICSERV);
-    switch (addr->sa_family)
-    {
-    case AF_INET:
-        fmt = "%s:%s";
-        break;
-    default:
-        fmt = "[%s]:%s";
-        break;
-    }
-    return snprintf(buffer, bufsize, fmt, host, serv);
+    return snprintf(buffer, bufsize,
+        ((addr->sa_family == AF_INET) ? "%s:%s" : "[%s]:%s"), host, serv);
 }
 
 /**
@@ -87,20 +78,11 @@ int util_decode_network(const struct sockaddr *addr, socklen_t addrlen,
                         unsigned bits, char *buffer, size_t bufsize)
 {
     char host[INET6_ADDRSTRLEN + 1] = "???";
-    const char *fmt;
 
     getnameinfo(addr, addrlen, host, sizeof(host), NULL, 0,
                 NI_NUMERICHOST);
-    switch (addr->sa_family)
-    {
-    case AF_INET:
-        fmt = "%s/%u";
-        break;
-    default:
-        fmt = "[%s]/%u";
-        break;
-    }
-    return snprintf(buffer, bufsize, fmt, host, bits);
+    return snprintf(buffer, bufsize,
+        ((addr->sa_family == AF_INET) ? "%s/%u" : "[%s]/%u"), host, bits);
 }
 
 ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_t buflen)

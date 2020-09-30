@@ -9,14 +9,6 @@
 #include "crypto.h"
 #include "logger.h"
 
-static void openssl_error(int prio, const char *fmt, unsigned long err)
-{
-    char errbuf[256];
-
-    ERR_error_string_n(err, errbuf, sizeof(errbuf));
-    logger(prio, fmt, errbuf);
-}
-
 void crypto_init(void)
 {
     if (OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS |
@@ -33,7 +25,10 @@ void crypto_generate_nonce(unsigned char *buffer, size_t buflen)
 {
     if (RAND_bytes(buffer, buflen) == 0)
     {
-        openssl_error(LOG_ERR, "FATAL: Failed to get random data: %s", ERR_get_error());
+        char errbuf[256];
+
+        ERR_error_string_n(ERR_get_error(), errbuf, sizeof(errbuf));
+        logger(LOG_ERR, "FATAL: Failed to get random data: %s", errbuf);
         exit(1);
     }
 }
@@ -55,7 +50,10 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
     err = ERR_get_error();
     if (ret == NULL)
     {
-        openssl_error(LOG_ERR, "HMAC-MD5 hash failed: %s", err);
+        char errbuf[256];
+
+        ERR_error_string_n(err, errbuf, sizeof(errbuf));
+        logger(LOG_ERR, "HMAC-MD5 hash failed: %s", errbuf);
         return -1;
     }
     return 0;

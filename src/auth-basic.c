@@ -10,6 +10,7 @@
 #include "authuser.h"
 #include "authmethod.h"
 #include "socks5bits.h"
+#include "crypto.h"
 
 #define DEFAULT_SALT_SIZE 8 // Number of salt characters to generate
 static const char DEFAULT_SALT_PREFIX[] = "$6$"; // Default crypt(3) method
@@ -73,6 +74,8 @@ MALFORMED:
  */
 ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
 {
+    // Salt alphabet contains 64 symbols, 6 bits per character;
+    // 4 characters contain 3 bytes (24 bits) of randomness
     static const char ALPHABET[] = "ABCDEFGHIJKLMNOP"
                                    "QRSTUVWXYZabcdef"
                                    "ghijklmnopqrstuv"
@@ -80,13 +83,34 @@ ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
     struct crypt_data cdata;
     char salt[sizeof(DEFAULT_SALT_PREFIX) + DEFAULT_SALT_SIZE + 1], *ep;
     const char *cpass;
+    unsigned char randval[(DEFAULT_SALT_SIZE*3 + 2)/4];
+    unsigned rval = 0;
     size_t csize;
-    int i;
+    int i, j;
 
     memcpy(salt, DEFAULT_SALT_PREFIX, sizeof(DEFAULT_SALT_PREFIX) - 1);
     ep = &salt[sizeof(DEFAULT_SALT_PREFIX) - 1];
-    for (i = 0; i < DEFAULT_SALT_SIZE; i++)
-        *ep++ = ALPHABET[rand() % 64];
+    crypto_generate_nonce(randval, sizeof(randval));
+    rval = 0;
+    for (i = 0, j = 0; i < DEFAULT_SALT_SIZE; i++)
+    {
+        switch (i % 4)
+        {
+        case 0:
+            rval = randval[j++];
+            break;
+        case 1:
+            rval = rval|(((unsigned)randval[j++]) << 2);
+            break;
+        case 2:
+            rval = rval|(((unsigned)randval[j++]) << 4);
+            break;
+        case 3:
+            break;
+        }
+        *ep++ = ALPHABET[rval & 0x3F];
+        rval >>= 6;
+    }
     *ep++ = '$';
     *ep = '\0';
     cpass = crypt_r(password, salt, &cdata);
