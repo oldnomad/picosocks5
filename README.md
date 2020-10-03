@@ -54,6 +54,7 @@ For building PicoSOCKS5 you'll need:
   guaranteed to work). PicoSOCKS5 conforms to C99 standard, so it can be
   ported to any compiler supporting it; however, if C11 or later
   is supported, some of newer features may be used.
+
 - GLibc or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI
   extensions) and following GNU extensions:
 
@@ -62,10 +63,11 @@ For building PicoSOCKS5 you'll need:
   - `crypt_r(3)` and algorithm extensions for `crypt(3)` family.
   - Format specifier `"%m"` in `printf(3)` family.
   - Optionally, `getifaddrs(3)`. The program will compile without it,
-    by when it's available, additional functionality is enabled.
+    but when it's available, additional functionality is enabled.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
+
 - If you want to enable CHAP authentication method, you'll also need either
   GnuTLS or OpenSSL library. Following features are used:
 
