@@ -220,11 +220,13 @@ static int socks_acl_check_client_address(const struct socks_acl_set *set,
 /**
  * Set options for connection socket.
  */
-static void socks_set_options(int sock) {
+static void socks_set_options(const socks_state_t *conn, int sock) {
     if (IO_TIMEOUT.tv_sec != 0 || IO_TIMEOUT.tv_usec != 0)
     {
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT));
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT));
+        if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT)) == -1)
+            logger(LOG_WARNING, "<%s> Failed to set receive timeout: %m", conn->logprefix);
+        if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &IO_TIMEOUT, sizeof(IO_TIMEOUT)) == -1)
+            logger(LOG_WARNING, "<%s> Failed to set send timeout: %m", conn->logprefix);
     }
 }
 
@@ -517,7 +519,7 @@ static int socks_process_connect(socks_state_t *conn, int *destfd)
         logger(LOG_WARNING, "<%s> Failed to open socket: %m", conn->logprefix);
         return socks_errno2reply(err);
     }
-    socks_set_options(*destfd);
+    socks_set_options(conn, *destfd);
     if (connect(*destfd, (const struct sockaddr *)&conn->server, sizeof(conn->server)) == -1)
     {
         err = errno;
@@ -567,7 +569,8 @@ static int socks_process_bind(socks_state_t *conn, struct sockaddr_storage *out,
     if (srv.ss_family == AF_INET6)
     {
         int val = 1;
-        setsockopt(connfd, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val));
+        if (setsockopt(connfd, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val)) == -1)
+            logger(LOG_WARNING, "<%s> Failed to set IPv6-only flag: %m", conn->logprefix);
     }
     if (bind(connfd, (const struct sockaddr *)&srv, sizeof(srv)) == -1)
     {
@@ -649,7 +652,7 @@ ON_ERROR:
         close(*destfd);
         goto ON_ERROR;
     }
-    socks_set_options(*destfd);
+    socks_set_options(conn, *destfd);
     conn->server = *out;
     logger(LOG_DEBUG, "<%s> Connected", conn->logprefix);
     return SOCKS_ERR_SUCCESS;
@@ -765,9 +768,19 @@ static void *socks_connection_thread(void *arg)
     socklen_t addrlen;
 
     addrlen = sizeof(conn.client);
-    getpeername(conn.socket, (struct sockaddr *)&conn.client, &addrlen);
+    if (getpeername(conn.socket, (struct sockaddr *)&conn.client, &addrlen) == -1)
+    {
+        logger(LOG_ERR, "Failed to get remote address: %m");
+ON_ERROR:
+        close(conn.socket);
+        return NULL;
+    }
     addrlen = sizeof(conn.local);
-    getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen);
+    if (getsockname(conn.socket, (struct sockaddr *)&conn.local, &addrlen) == -1)
+    {
+        logger(LOG_ERR, "Failed to get local address: %m");
+        goto ON_ERROR;
+    }
     net = NULL;
     if (socks_acl_check_client_address(&ACL_GLOBAL, (const struct sockaddr *)&conn.client, &net) == 0)
     {
@@ -789,7 +802,7 @@ static void *socks_connection_thread(void *arg)
         return NULL;
     }
 
-    socks_set_options(conn.socket);
+    socks_set_options(&conn, conn.socket);
     socks_client_conn_inc();
     if (socks_negotiate_method(&conn) == 0)
         socks_process_request(&conn);
@@ -1037,10 +1050,12 @@ ON_ERROR:
         if (ptr->ai_family == AF_INET6)
         {
             val = 1;
-            setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val));
+            if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val)) == -1)
+                logger(LOG_WARNING, "Failed to set IPv6-only flag: %m");
         }
         val = 1;
-        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) == -1)
+            logger(LOG_WARNING, "Failed to set reuse flag: %m");
         if (bind(sock, ptr->ai_addr, ptr->ai_addrlen) == -1)
         {
             logger(LOG_ERR, "Failed to bind address <%s>: %m", hostaddr);
