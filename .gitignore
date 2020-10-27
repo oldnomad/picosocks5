@@ -42,3 +42,6 @@ debian/tmp/
 
 # CppCheck artefacts
 picosocks-cppcheck*
+
+# Coverity artefacts
+cov-int/

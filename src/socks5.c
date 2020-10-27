@@ -735,10 +735,13 @@ static int socks_process_request(socks_state_t *conn)
         break;
     }
 ON_ERROR:
-    if (socks_send_reply(conn, errcode, (struct sockaddr *)&out) < 0)
+    if (socks_send_reply(conn, errcode, (struct sockaddr *)&out) < 0 ||
+        errcode != SOCKS_ERR_SUCCESS)
+    {
+        if (destfd != -1)
+            close(destfd);
         return -1;
-    if (errcode != SOCKS_ERR_SUCCESS)
-        return -1;
+    }
     if (destfd != -1)
         socks_process_data(conn, destfd);
     return 0;
@@ -1027,6 +1030,8 @@ int socks_listen_at(const char *host, const char *service, fd_set *fds)
             logger(LOG_ERR, "Failed to open socket for address <%s>: %m", hostaddr);
 ON_ERROR:
             freeaddrinfo(addrlist);
+            if (sock != -1)
+                close(sock);
             return -1;
         }
         if (ptr->ai_family == AF_INET6)
