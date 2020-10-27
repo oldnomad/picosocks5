@@ -1,14 +1,20 @@
+picosocks5 (0.10) unstable; urgency=medium
+
+  * Various fixes for bugs found by static analysis.
+
+ -- Alec Kojaev <alec@kojsev.name>  Tue, 27 Oct 2020 21:37:44 +0300
+
 picosocks5 (0.9) unstable; urgency=medium
 
   * Implemented limits on cient addresses.
 
- -- Alec Kojaev <alec@home.kojaev.name>  Tue, 26 May 2020 14:13:54 +0300
+ -- Alec Kojaev <alec@kojsev.name>  Tue, 26 May 2020 14:13:54 +0300
 
 picosocks5 (0.8) unstable; urgency=medium
 
   * Implemented read/write timeout for all connections.
 
- -- Alec Kojaev <alec@home.kojaev.name>  Wed, 22 Apr 2020 22:20:27 +0300
+ -- Alec Kojaev <alec@kojsev.name>  Wed, 22 Apr 2020 22:20:27 +0300
 
 picosocks5 (0.7) unstable; urgency=medium
 
@@ -18,13 +24,13 @@ picosocks5 (0.7) unstable; urgency=medium
   * Implemented limit on number of concurrent client connections;
     uses C11 atomics if available.
 
- -- Alec Kojaev <alec@home.kojaev.name>  Sun, 19 Apr 2020 23:31:28 +0300
+ -- Alec Kojaev <alec@kojsev.name>  Sun, 19 Apr 2020 23:31:28 +0300
 
 picosocks5 (0.6) unstable; urgency=medium
 
   * Implemented BIND request.
 
- -- Alec Kojaev <alec@home.kojaev.name>  Thu, 09 May 2019 23:48:59 +0300
+ -- Alec Kojaev <alec@kojsev.name>  Thu, 09 May 2019 23:48:59 +0300
 
 picosocks5 (0.5) unstable; urgency=medium
 
