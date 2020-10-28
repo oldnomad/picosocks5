@@ -24,9 +24,10 @@ AS_IF([test "x${PANDOC}" = xyes],
       [AC_MSG_WARN([pandoc not found, man pages will not be built])])
 AM_CONDITIONAL([HAVE_PANDOC], [test "x${PANDOC}" = xyes])
 
-AC_CHECK_HEADERS([fcntl.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h],
+AC_CHECK_HEADERS([fcntl.h limits.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h],
                  [], [AC_MSG_ERROR([missing required header])])
 AC_CHECK_HEADERS([ifaddrs.h stdatomic.h])
+AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UID_T
@@ -36,6 +37,7 @@ AC_CHECK_TYPES([atomic_ulong], [], [], [[#include <stdatomic.h>]])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_STRERROR_R
+AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strdup strtod strtoul],
                [], [AC_MSG_ERROR([missing required function])])
 AC_CHECK_FUNCS([getifaddrs])
