@@ -54,8 +54,12 @@ release-job:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - echo 'Release job'
+    - export RELEASE_DESCRIPTION=$(cat build/release-notes.md)
   only:
     - tags
+  needs:
+    - job: debian-packages
+      artifacts: true
   release:
     tag_name: $CI_COMMIT_TAG
-    description: build/release-notes.md
+    description: $RELEASE_DESCRIPTION
