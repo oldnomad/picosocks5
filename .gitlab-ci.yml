@@ -50,7 +50,7 @@ debian-packages:
       - build/*
 
 release-job:
-  stage: package
+  stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - echo 'Release job'
