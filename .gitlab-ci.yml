@@ -16,7 +16,7 @@ stages:
 
 test-build:
   stage: build
-  extends: build-common
+  extends: .build-common
   script:
     - autoreconf -f -i -Wall
     - ./configure --with-crypto=gnutls
@@ -30,7 +30,7 @@ test-build:
 
 debian-packages:
   stage: release
-  extends: build-common
+  extends: .build-common
   script:
     - autoreconf -f -i -Wall
     - dpkg-buildpackage -us -uc
