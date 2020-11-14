@@ -39,7 +39,8 @@ debian-packages:
     - mv ../picosocks5*.dsc build/
     - mv ../picosocks5*.changes build/
     - mv ../picosocks5*.buildinfo build/
-    - { echo '# Changes:'; dpkg-parsechangelog -S Changes | tail -n +3; } >./release-notes.md
+    - echo '# Changes:' >./release-notes.md
+    - dpkg-parsechangelog -S Changes | tail -n +3 >>./release-notes.md
   only:
     - tags
   artifacts:
