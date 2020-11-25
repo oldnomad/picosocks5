@@ -1,4 +1,7 @@
 AC_INIT([picosocks5], m4_esyscmd_s([./version.sh]), [alec.kojaev@gmail.com], [picosocks5], [https://gitlab.com/oldnomad/picosocks5])
+m4_define([AC_PACKAGE_COPYRIGHT], [Copyright (c) 2018-2020 Alexander Kozhaev])
+AC_DEFINE([PACKAGE_COPYRIGHT], ["AC_PACKAGE_COPYRIGHT"], [Package copyright])
+AC_COPYRIGHT([AC_PACKAGE_COPYRIGHT])
 AC_MSG_NOTICE([detected version: AC_PACKAGE_VERSION])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])

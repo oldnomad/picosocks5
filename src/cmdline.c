@@ -16,8 +16,6 @@
 #include "inifile.h"
 #include "cmdline.h"
 
-#define FULL_VERSION_TEXT  PACKAGE_NAME " " PACKAGE_VERSION;
-
 #define DEFAULT_LISTEN_SERVICE "1080"
 #define MAX_TIMEOUT_VALUE 3600.0 // seconds
 
@@ -399,14 +397,14 @@ static int process_version(const ini_context_t *ctxt, const ini_option_t *opt, c
     (void)ctxt;
     (void)opt;
     (void)value;
-    printf("%s\n", cmdline_version());
+    printf("%s\n%s\n", cmdline_version(), PACKAGE_COPYRIGHT);
     exit(0);
     return 0;
 }
 
 const char *cmdline_version(void)
 {
-    return FULL_VERSION_TEXT;
+    return PACKAGE_NAME " " PACKAGE_VERSION;
 }
 
 void cmdline_process(int argc, char **argv, daemon_config_t *cfg)
