@@ -3,11 +3,11 @@ Upstream-Name: picosocks5
 Source: <https://gitlab.com/oldnomad/picosocks5>
 
 Files: *
-Copyright: 2019 Alec Kojaev <alec.kojaev@gmail.com>
+Copyright: 2018-2020 Alec Kojaev <alec.kojaev@gmail.com>
 License: GPL-3.0+-OpenSSL
 
 Files: debian/*
-Copyright: 2019 Alec Kojaev <alec.kojaev@gmail.com>
+Copyright: 2018-2020 Alec Kojaev <alec.kojaev@gmail.com>
 License: GPL-3.0+-OpenSSL
 
 License: GPL-3.0+-OpenSSL
