@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include "authfile.h"
 #include "authuser.h"
+#include "acl.h"
 #include "socks5.h"
 #include "logger.h"
 #include "util.h"
@@ -344,7 +345,7 @@ static int process_networks(const ini_context_t *ctxt, const ini_option_t *opt, 
     }
     else
         addr = rule;
-    if (socks_add_client_network(ctxt->section, allow, addr, bits) != 0)
+    if (acl_add_client_network(ctxt->section, allow, addr, bits) != 0)
     {
         ini_error(ctxt, "failed to add network rule '%s'", value);
         return -1;

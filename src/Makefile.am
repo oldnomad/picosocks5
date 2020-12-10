@@ -2,7 +2,8 @@ AM_CFLAGS = -Wall -Wextra -pedantic -Wshadow -Wunused -Wuninitialized -Wpointer-
 sbin_PROGRAMS = picosocks5
 bin_PROGRAMS = pis5user
 
-picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c socks5.c \
+picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c \
+    socks5.c acl.c \
     auth.c authuser.c auth-basic.c auth-chap.c \
     authfile.c authfile-password.c
 EXTRA_picosocks5_SOURCES = crypto-gnutls.c crypto-openssl.c crypto-emul.c
