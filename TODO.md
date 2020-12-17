@@ -21,5 +21,5 @@
   - [x] Configuration file.
   - [ ] ACL.
     - [x] Limit incoming addresses.
-    - [ ] Limit request types.
+    - [x] Limit request types.
     - [ ] Limit operations for specific users.

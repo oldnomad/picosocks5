@@ -641,6 +641,14 @@ static int socks_process_request(socks_state_t *conn)
         break;
     }
     conn->server = dst;
+    // TODO: Check group
+    if (!acl_check_request(NULL, conn->buffer[1], (const struct sockaddr *)&dst, sizeof(dst)))
+    {
+        logger(LOG_NOTICE, "<%s> Command 0x%02X denied by ACL", conn->logprefix,
+            conn->buffer[1]);
+        errcode = SOCKS_ERR_DISALLOWED;
+        goto ON_ERROR;
+    }
     switch (conn->buffer[1]) // CMD
     {
     case SOCKS_CMD_ASSOCIATE:
@@ -704,7 +712,7 @@ ON_ERROR:
         logger(LOG_ERR, "Failed to get local address: %m");
         goto ON_ERROR;
     }
-    if (acl_check_client_address((const struct sockaddr *)&conn.client, sizeof(conn.client)) == 0)
+    if (!acl_check_client_address(NULL, (const struct sockaddr *)&conn.client, sizeof(conn.client)))
         goto ON_ERROR;
 
     socks_set_options(&conn, conn.socket);

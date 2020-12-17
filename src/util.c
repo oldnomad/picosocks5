@@ -79,6 +79,8 @@ int util_decode_network(const struct sockaddr *addr, socklen_t addrlen,
 {
     char host[INET6_ADDRSTRLEN + 1] = "???";
 
+    if (addr->sa_family == AF_UNSPEC && bits == 0)
+        return snprintf(buffer, bufsize, "*/0");
     getnameinfo(addr, addrlen, host, sizeof(host), NULL, 0,
                 NI_NUMERICHOST);
     return snprintf(buffer, bufsize,

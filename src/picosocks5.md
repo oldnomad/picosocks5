@@ -92,6 +92,25 @@ Listen port can be a decimal number of a service name (see **services**(5)).
     (allow or disallow) is specified, an address is allowed only if it
     has a matching allow rule.
 
+`--request` [!]_method_[:_address_[/_bits_]],...
+:   Specify rules allowing and disallowing specific types of requests,
+    optionally limited to destination network.
+
+    Supported method prefixes are `"connect"`, `"bind"`, `"assoc"`,
+    and `"all"` for all types of requests.
+
+    Omitted network specification, or, alternatively, specifying the
+    network as "*", means that the rule is applied to requests to any
+    destination.
+
+    Note that rules are processed in order until the first match, so if
+    a subset of requests has to be excluded from a larger allowed set,
+    disallow rule should precede allow rule.
+
+    By default all requests are allowed (equivalent to rule "all:*").
+    However, if at least one rule (allow or disallow) is specified,
+    a request is allowed only if it has a matching allow rule.
+
 `-u` _user_, `--user` _user_
 :   Drop privileges to specified user. User can be a user name or
     a numeric UID.
@@ -149,6 +168,12 @@ following forms are accepted:
 
 Alternative forms of IPv4 addresses (octal, hexadecimal, with fewer than four
 dot-separated elements) are not accepted.
+
+## Note on ACL network specification
+
+Due to internal reasons, a network with empty mask (0 bits) will be matched
+both by IPv4 and IPv6 addresses, regardless of address family of the network
+address.
 
 # CONFIGURATION FILE
 

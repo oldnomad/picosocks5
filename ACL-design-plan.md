@@ -19,13 +19,11 @@ This is a design plan for ACLs in picosocks5.
 # Proposed implementation
 
   - [x] Parameter `network` for connection-time client address check.
-  - [ ] Parameter `request` for limiting supported request operations.
+  - [x] Parameter `request` for limiting supported request operations.
         Parameter value is a comma-separated list of request patterns.
         Each pattern consists of request type prefix (`connect`, `bind`,
-        `associate`, or `all` for all types), a colon (`:`), and a
-        network or domain name pattern. If omitted, `all:*` (all types,
-        all destinations) is used. Some aliases are allowed
-        (`assoc` = `associate`).
+        `assoc`, or `all` for all types), a colon (`:`), and a network.
+        If omitted, `all:*` (all types,  all destinations) is used.
   - [ ] Allow named sections ("group parameters") containing:
     - [ ] Parameters `network` and `request`.
     - [ ] Parameter `base`, referring to other named sections.

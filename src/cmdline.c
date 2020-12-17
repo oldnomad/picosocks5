@@ -31,6 +31,7 @@ static int process_bind     (const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_maxconn  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_timeout  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_networks (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+static int process_requests (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_group    (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_help     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -48,6 +49,7 @@ static const ini_option_t COMMON_SECTION[] = {
     { "maxconn",   "maxconn",     0, INI_TYPE_PLAIN,   process_maxconn   },
     { "timeout",   "timeout",     0, INI_TYPE_PLAIN,   process_timeout   },
     { "network",   "network",     0, INI_TYPE_LIST,    process_networks  },
+    { "request",   "request",     0, INI_TYPE_LIST,    process_requests  },
     { "user",      "user",      'u', INI_TYPE_PLAIN,   process_user      },
     { "group",     "group",     'g', INI_TYPE_PLAIN,   process_group     },
     { "=",         "help",      'h', INI_TYPE_BOOLEAN, process_help      },
@@ -83,6 +85,12 @@ static const char OPTIONS_DESC[] =
     "       Note that networks are processed in list order until the\n"
     "       first match, so if a subnetwork is disallowed within a larger\n"
     "       allowed network, disallow rule should precede allow rule.\n\n"
+    "    --request [!]<method>:{<address>[/<bits>] | *},...\n"
+    "       Specify allowed and disallowed SOCKS requests.\n"
+    "       Prefix <method> can be 'connect', 'bind', 'assoc', or 'all'.\n"
+    "       Note that the list is processed in order until the first\n"
+    "       matching rule. If the list is not empty and no match is found,\n"
+    "       the request is denied.\n\n"
     "    -u <user>, --user=<user>\n"
     "    -g <group>, --group=<group>\n"
     "        Specify non-privileged user and group to use for daemon\n"
@@ -348,6 +356,68 @@ static int process_networks(const ini_context_t *ctxt, const ini_option_t *opt, 
     if (acl_add_client_network(ctxt->section, allow, addr, bits) != 0)
     {
         ini_error(ctxt, "failed to add network rule '%s'", value);
+        return -1;
+    }
+    return 0;
+}
+
+static int process_requests(const ini_context_t *ctxt, const ini_option_t *opt, const char *value)
+{
+    const char *sep, *addr, *rule = value;
+    char addrbuf[HOST_NAME_MAX + 1];
+    unsigned bits = UINT_MAX;
+    int allow = 1, type = -1;
+
+    (void)ctxt;
+    (void)opt;
+    if (*rule == '!')
+    {
+        allow = 0;
+        ++rule;
+    }
+    sep = strchr(rule, ':');
+    if (sep == NULL)
+    {
+        type = acl_find_request_type(rule, -1);
+        rule = NULL;
+    }
+    else
+    {
+        type = acl_find_request_type(rule, (ssize_t)(sep - rule));
+        rule = sep + 1;
+    }
+    if (type < 0)
+    {
+        ini_error(ctxt, "unrecognized request rule '%s'", value);
+        return -1;
+    }
+    if (rule == NULL || (rule[0] == '*' && rule[1] == '\0'))
+        addr = NULL;
+    else
+    {
+        sep = strrchr(rule, '/');
+        if (sep != NULL)
+        {
+            char *ep = NULL;
+            unsigned long v;
+            size_t alen;
+
+            v = strtoul(&sep[1], &ep, 10);
+            if (v < UINT_MAX && ep != NULL && ep != &sep[1] && *ep == '\0')
+                bits = (unsigned)v;
+            alen = (sep - rule);
+            if (alen >= sizeof(addrbuf))
+                alen = sizeof(addrbuf) - 1;
+            memcpy(addrbuf, rule, alen);
+            addrbuf[alen] = '\0';
+            addr = addrbuf;
+        }
+        else
+            addr = rule;
+    }
+    if (acl_add_request_rule(ctxt->section, allow, type, addr, bits) != 0)
+    {
+        ini_error(ctxt, "failed to add request rule '%s'", value);
         return -1;
     }
     return 0;
