@@ -1,3 +1,7 @@
+/**
+ * @file
+ * ACL management functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -11,30 +15,42 @@
 #include "socks5bits.h"
 #include "util.h"
 
+/**
+ * Structure fot network list element.
+ */
 struct acl_network {
-    struct acl_network *next;     // Pointer to next network
-    int allow;                    // Allow/deny flag
-    struct sockaddr_storage addr; // Network address
-    unsigned bits;                // Bitmask width
+    struct acl_network *next;     ///< Pointer to next network
+    int allow;                    ///< Allow/deny flag
+    struct sockaddr_storage addr; ///< Network address
+    unsigned bits;                ///< Bitmask width
 };
 
+/**
+ * Structure for request rule list element.
+ */
 struct acl_request {
-    struct acl_request *next;     // Pointer to next request rule
-    int allow;                    // Allow/deny flag
-    int type;                     // Request type
-#define SOCKS_CMDS_ALL 0x8000
-    struct sockaddr_storage addr; // Network address
-    unsigned bits;                // Bitmask width
+    struct acl_request *next;     ///< Pointer to next request rule
+    int allow;                    ///< Allow/deny flag
+    int type;                     ///< Request type
+#define SOCKS_CMDS_ALL 0x8000     ///< Wildcard request type value
+    struct sockaddr_storage addr; ///< Network address
+    unsigned bits;                ///< Bitmask width
 };
 
+/**
+ * Structure for named ACL set.
+ */
 struct acl_set {
-    const char *name;
-    const struct acl_set *base;
+    const char *name;             ///< ACL set name
+    const struct acl_set *base;   ///< ACL set parent set
 
-    struct acl_network *client_networks[2];
-    struct acl_request *client_requests[2];
+    struct acl_network *client_networks[2]; ///< List of networks
+    struct acl_request *client_requests[2]; ///< List of request rules
 };
 
+/**
+ * Global (root) ACL set.
+ */
 static struct acl_set ACL_GLOBAL = {
     .name = "*",
     .base = NULL,
@@ -42,10 +58,13 @@ static struct acl_set ACL_GLOBAL = {
     .client_requests = { NULL, NULL },
 };
 
+/**
+ * Known names for request types.
+ */
 static const struct {
-    int         type;
-    ssize_t     length;
-    const char *name;
+    int         type;   ///< Request type value
+    ssize_t     length; ///< Name length
+    const char *name;   ///< Name
 } REQUEST_TYPES[] = {
     { SOCKS_CMD_CONNECT,   7, "connect" },
     { SOCKS_CMD_BIND,      4, "bind"    },
@@ -57,6 +76,11 @@ static const struct {
 
 /**
  * Match an address against a network.
+ *
+ * @param addr    address to check.
+ * @param netaddr network address.
+ * @param bits    network bitmask width.
+ * @return true if address is in the network.
  */
 static int match_network(const struct sockaddr *addr,
                          const struct sockaddr *netaddr, unsigned bits)
@@ -101,6 +125,11 @@ static int match_network(const struct sockaddr *addr,
 
 /**
  * Check client address against an ACL set.
+ *
+ * @param set  ACL set to check against.
+ * @param addr address to check.
+ * @param pnet if not NULL, buffer for network that matched.
+ * @return true if address is allowed.
  */
 static int check_client_address(const struct acl_set *set,
                                 const struct sockaddr *addr,
@@ -124,6 +153,12 @@ static int check_client_address(const struct acl_set *set,
 
 /**
  * Check request against an ACL set.
+ *
+ * @param set  ACL set to check against.
+ * @param type request type.
+ * @param addr destination address.
+ * @param preq if not NULL, buffer for request rule that matched.
+ * @return true if request is allowed.
  */
 static int check_request(const struct acl_set *set,
                          unsigned char type,
@@ -149,6 +184,11 @@ static int check_request(const struct acl_set *set,
 
 /**
  * Convert network to address/bits.
+ *
+ * @param address network address as a text.
+ * @param pbits   pointer to network bitmask width (will be clamped).
+ * @param addr    buffer for network address.
+ * @return zero on success, or -1 on error.
  */
 static int normalize_network(const char *address, unsigned *pbits,
                              struct sockaddr_storage *addr) {
@@ -198,6 +238,9 @@ static int normalize_network(const char *address, unsigned *pbits,
 
 /**
  * Find group by name.
+ *
+ * @param group ACL set name.
+ * @return ACL set, or NULL if not found.
  */
 static struct acl_set *find_acl_group(const char *group) {
     if (group == NULL)
@@ -208,6 +251,11 @@ static struct acl_set *find_acl_group(const char *group) {
 
 /**
  * Check whether client address is allowed.
+ *
+ * @param group   ACL set name.
+ * @param addr    address to check.
+ * @param addrlen size of address.
+ * @return positive if address is allowed, or zero if not allowed, or -1 on error.
  */
 int acl_check_client_address(const char *group, const struct sockaddr *addr, size_t addrlen) {
     const struct acl_set *set;
@@ -237,6 +285,12 @@ int acl_check_client_address(const char *group, const struct sockaddr *addr, siz
 
 /**
  * Add allowed or disallowed client network.
+ *
+ * @param group   ACL set name.
+ * @param allow   whether the network will be allowed.
+ * @param address network address as a text.
+ * @param bits    network bitmask width.
+ * @return zero on success, or -1 on error.
  */
 int acl_add_client_network(const char *group, int allow, const char *address, unsigned bits)
 {
@@ -271,7 +325,10 @@ int acl_add_client_network(const char *group, int allow, const char *address, un
 
 /**
  * Find SOCKS request type by name.
- * Returns -1 on error.
+ *
+ * @param name purported request type name.
+ * @param len  length of the name, or -1 if NUL-terminated.
+ * @return request type value, or -1 on error.
  */
 int acl_find_request_type(const char *name, ssize_t len)
 {
@@ -287,7 +344,9 @@ int acl_find_request_type(const char *name, ssize_t len)
 
 /**
  * Find SOCKS request type name by value.
- * Returns NULL on error.
+ *
+ * @param type request type value.
+ * @return request type name, or NULL on error.
  */
 const char *acl_get_request_type_name(int type)
 {
@@ -301,6 +360,12 @@ const char *acl_get_request_type_name(int type)
 
 /**
  * Check whether request is allowed.
+ *
+ * @param group   ACL set name.
+ * @param type    request type.
+ * @param addr    destination address.
+ * @param addrlen destination address length.
+ * @return positive if request is allowed, or zero if not allowed, or -1 on error.
  */
 int acl_check_request(const char *group, unsigned char type, const struct sockaddr *addr, size_t addrlen)
 {
@@ -331,6 +396,13 @@ int acl_check_request(const char *group, unsigned char type, const struct sockad
 
 /**
  * Add allowed or disallowed SOCKS requests.
+ *
+ * @param group   ACL set name.
+ * @param allow   whether the rule will be allowed.
+ * @param type    request type value.
+ * @param address destination network address as a text.
+ * @param bits    destination network bitmask width.
+ * @return zero on success, or -1 on error.
  */
 int acl_add_request_rule(const char *group, int allow, int type, const char *address, unsigned bits)
 {
@@ -366,6 +438,8 @@ int acl_add_request_rule(const char *group, int allow, int type, const char *add
 
 /**
  * Report ACL set rules.
+ *
+ * @param set ACL set name.
  */
 static void show_acl_set(const struct acl_set *set)
 {

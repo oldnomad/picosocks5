@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Proxy functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -22,26 +26,44 @@
 #include "util.h"
 #include "socks5bits.h"
 
+/**
+ * Client connection state.
+ */
 typedef struct {
-    int socket;                     // Client socket
+    int socket;                     ///< Client socket
 
-    const char *username;           // Authenticated user (if any)
-    void *authdata;                 // Additional malloc'ed data (if any)
+    const char *username;           ///< Authenticated user (if any)
+    void *authdata;                 ///< Additional malloc'ed data (if any)
 
-    struct sockaddr_storage local;  // Local address and port
-    struct sockaddr_storage client; // Client address and port
-    struct sockaddr_storage server; // Destination server address and port
-    char logprefix[256];            // Prefix for log messages
+    struct sockaddr_storage local;  ///< Local address and port
+    struct sockaddr_storage client; ///< Client address and port
+    struct sockaddr_storage server; ///< Destination server address and port
+    char logprefix[256];            ///< Prefix for log messages
 
-    unsigned char buffer[4096];     // I/O buffer
+    unsigned char buffer[4096];     ///< I/O buffer
 } socks_state_t;
 
+/**
+ * External IPv4 address.
+ */
 static struct sockaddr_storage BIND_ADDRESS_IP4 = { .ss_family = AF_UNSPEC };
+/**
+ * External IPv6 address.
+ */
 static struct sockaddr_storage BIND_ADDRESS_IP6 = { .ss_family = AF_UNSPEC };
+/**
+ * Maximum number of simultaneous client connections.
+ */
 static unsigned long MAX_CLIENT_CONN = 0;
+/**
+ * I/O timeout.
+ */
 static struct timeval IO_TIMEOUT = { 0, 0 };
 
 #if HAVE_STDC_ATOMICS
+/**
+ * Current number of simultaneous client connections.
+ */
 static atomic_ulong CLIENT_CONN = 0;
 #else
 static pthread_mutex_t CLIENT_CONN_MUTEX = PTHREAD_MUTEX_INITIALIZER;
@@ -49,7 +71,10 @@ static unsigned long CLIENT_CONN = 0;
 #endif
 
 /**
- * Build prefix for SOCKS log messages
+ * Build prefix for SOCKS log messages.
+ *
+ * @param conn  client connection.
+ * @param state new connection state.
  */
 static void socks_logger_prefix(socks_state_t *conn, const char *state)
 {
@@ -89,6 +114,9 @@ static void socks_logger_prefix(socks_state_t *conn, const char *state)
 
 /**
  * Get a freshly allocated error string for error code.
+ *
+ * @param err error code.
+ * @return malloc'd error text string.
  */
 static char *socks_strerror(int err) {
     char errbuf[1024] = "<unknown error>";
@@ -127,6 +155,8 @@ static inline void socks_client_conn_dec(void)
 
 /**
  * Get client connections counter.
+ *
+ * @return current number of simultaneous client connections.
  */
 static inline unsigned long socks_client_conn(void)
 {
@@ -143,6 +173,9 @@ static inline unsigned long socks_client_conn(void)
 
 /**
  * Set options for connection socket.
+ *
+ * @param conn client connection.
+ * @param sock new socket.
  */
 static void socks_set_options(const socks_state_t *conn, int sock) {
     if (IO_TIMEOUT.tv_sec != 0 || IO_TIMEOUT.tv_usec != 0)
@@ -155,7 +188,12 @@ static void socks_set_options(const socks_state_t *conn, int sock) {
 }
 
 /**
- * Read from SOCKS control channel
+ * Read from SOCKS control channel.
+ *
+ * @param conn    client connection.
+ * @param buffer  buffer to read into.
+ * @param bufsize buffer size.
+ * @return number of bytes read, or -1 on error.
  */
 static ssize_t socks_read(const socks_state_t *conn, unsigned char *buffer, size_t bufsize)
 {
@@ -171,7 +209,12 @@ static ssize_t socks_read(const socks_state_t *conn, unsigned char *buffer, size
 }
 
 /**
- * Write to SOCKS control channel
+ * Write to SOCKS control channel.
+ *
+ * @param conn   client connection.
+ * @param data   data to write.
+ * @param length data length.
+ * @return zero on success, or -1 on error.
  */
 static int socks_write(const socks_state_t *conn, const unsigned char *data, size_t length)
 {
@@ -185,7 +228,10 @@ static int socks_write(const socks_state_t *conn, const unsigned char *data, siz
 
 /**
  * Negotiate authentication method and perform corresponding
- * sub-negotiation stages
+ * sub-negotiation stages.
+ *
+ * @param conn client connection.
+ * @return zero on success, or -1 on error.
  */
 static int socks_negotiate_method(socks_state_t *conn)
 {
@@ -252,7 +298,10 @@ static int socks_negotiate_method(socks_state_t *conn)
 }
 
 /**
- * Errno code to SOCKS5 reply code
+ * Errno code to SOCKS5 reply code.
+ *
+ * @param err socket error code.
+ * @return SOCKS5 reply code.
  */
 static int socks_errno2reply(int err)
 {
@@ -280,7 +329,14 @@ static int socks_errno2reply(int err)
 }
 
 /**
- * Resolve domain name
+ * Resolve domain name.
+ *
+ * @param conn  client connection.
+ * @param dname domain name to resolve (not NUL-terminated).
+ * @param dlen  length of domain name.
+ * @param pnum  pointer to 16-bit port number in network order.
+ * @param dst   buffer for resolved address.
+ * @return zero on success, or -1 on error.
  */
 static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dlen, const void *pnum,
                          struct sockaddr_storage *dst)
@@ -321,7 +377,10 @@ static int socks_resolve(const socks_state_t *conn, const char *dname, size_t dl
 }
 
 /**
- * Copy data to/from destination
+ * Copy data to/from destination.
+ *
+ * @param conn   client connection.
+ * @param destfd socket connected to destination.
  */
 static void socks_process_data(socks_state_t *conn, int destfd)
 {
@@ -398,6 +457,11 @@ static void socks_process_data(socks_state_t *conn, int destfd)
 
 /**
  * Send a SOCKS5 reply.
+ *
+ * @param conn    client connection.
+ * @param errcode SOCKS5 reply code.
+ * @param out     address to include in the reply.
+ * @return zero on success, or -1 on error.
  */
 static int socks_send_reply(socks_state_t *conn, int errcode, const struct sockaddr *out)
 {
@@ -431,6 +495,10 @@ static int socks_send_reply(socks_state_t *conn, int errcode, const struct socka
 
 /**
  * Process SOCKS5 CONNECT command.
+ *
+ * @param conn   client connection.
+ * @param destfd buffer for socket connected to destination.
+ * @return SOCKS5 reply code.
  */
 static int socks_process_connect(socks_state_t *conn, int *destfd)
 {
@@ -457,6 +525,11 @@ static int socks_process_connect(socks_state_t *conn, int *destfd)
 
 /**
  * Process SOCKS5 BIND command.
+ *
+ * @param conn   client connection.
+ * @param out    buffer for peer address.
+ * @param destfd buffer for socket connected to peer.
+ * @return SOCKS5 reply code.
  */
 static int socks_process_bind(socks_state_t *conn, struct sockaddr_storage *out, int *destfd)
 {
@@ -583,7 +656,10 @@ ON_ERROR:
 }
 
 /**
- * Process SOCKS5 request
+ * Process SOCKS5 request.
+ *
+ * @param conn client connection.
+ * @return zero on success, or -1 on error.
  */
 static int socks_process_request(socks_state_t *conn)
 {
@@ -683,7 +759,10 @@ ON_ERROR:
 }
 
 /**
- * Thread function for client connection
+ * Thread function for client connection.
+ *
+ * @param arg client connection socket, as intptr_t.
+ * @return NULL.
  */
 static void *socks_connection_thread(void *arg)
 {
@@ -728,6 +807,13 @@ ON_ERROR:
 
 /**
  * Set single interface address to use for BIND and UDP ASSOCIATE commands.
+ *
+ * @param name    textual value representation.
+ * @param family  address family of the address.
+ * @param pmask   buffer containing bit flags for set address families.
+ * @param addr    address to set.
+ * @param addrlen address length.
+ * @return zero on success, or -1 on error.
  */
 static int socks_set_bind_ifaddr(const char *name, int family, unsigned *pmask,
                                  const struct sockaddr *addr, int addrlen)
@@ -773,6 +859,12 @@ static int socks_set_bind_ifaddr(const char *name, int family, unsigned *pmask,
 
 /**
  * Set interface addresses to use for BIND and UDP ASSOCIATE commands.
+ *
+ * This function accepts IPv4/IPv6 addresses, domain names, or, if supported,
+ * interface name prefixed with "@".
+ *
+ * @param host textual value representation.
+ * @return zero on success, or -1 on error.
  */
 int socks_set_bind_if(const char *host)
 {
@@ -821,6 +913,8 @@ int socks_set_bind_if(const char *host)
 
 /**
  * Set maximum number of concurrent client connections, or zero for no limit.
+ *
+ * @param maxconn maximum number of simultaneous client connections.
  */
 void socks_set_maxconn(unsigned long maxconn) {
     MAX_CLIENT_CONN = maxconn;
@@ -828,6 +922,9 @@ void socks_set_maxconn(unsigned long maxconn) {
 
 /**
  * Set socket recv/send timeout.
+ *
+ * @param sec  whole seconds.
+ * @param usec fractional microseconds.
  */
 void socks_set_timeout(time_t sec, suseconds_t usec) {
     memset(&IO_TIMEOUT, 0, sizeof(IO_TIMEOUT));
@@ -857,7 +954,12 @@ void socks_show_config(void)
 }
 
 /**
- * Listen at all addresses of given host, return parameters for select(3)
+ * Listen at all addresses of given host, return parameters for select(3).
+ *
+ * @param host    listening address as a text.
+ * @param service listening port as a text.
+ * @param fds     buffer for select(3) fd_set.
+ * @return number of handles in fd_set, or -1 on error.
  */
 int socks_listen_at(const char *host, const char *service, fd_set *fds)
 {
@@ -919,7 +1021,10 @@ ON_ERROR:
 }
 
 /**
- * Accept incoming connections on all listened addresses
+ * Accept incoming connections on all listened addresses.
+ *
+ * @param nfds number of handles in fd_set.
+ * @param fds  fd_set.
  */
 void socks_accept_loop(int nfds, const fd_set *fds)
 {

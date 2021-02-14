@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Main procedure.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -31,6 +35,9 @@ static volatile sig_atomic_t EXIT_SIGNO = 0;
 
 /**
  * Fork to background.
+ *
+ * @param uid UID to set.
+ * @param gid GID to set.
  */
 static void daemonize(uid_t uid, gid_t gid)
 {
@@ -77,6 +84,11 @@ static void daemonize(uid_t uid, gid_t gid)
     }
 }
 
+/**
+ * Fatal signal handler.
+ *
+ * @param signo signal number.
+ */
 static void signal_handler(int signo)
 {
     int fd;
@@ -87,6 +99,13 @@ static void signal_handler(int signo)
             close(fd);
 }
 
+/**
+ * Main procedure.
+ *
+ * @param argc number od command line parameters.
+ * @param argv array od command line parameters.
+ * @return exit code.
+ */
 int main(int argc, char **argv)
 {
     int nfds;

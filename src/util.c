@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Utility functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -21,6 +25,9 @@ static const char BASE64_ALPHA[65] = "ABCDEFGHIJKLMNOP"
 
 /**
  * Parse user specified as a numeric UID or user name.
+ *
+ * @param user user name or numeric UID.
+ * @return decoded UID.
  */
 uid_t util_parse_user(const char *user)
 {
@@ -40,6 +47,9 @@ uid_t util_parse_user(const char *user)
 
 /**
  * Parse group specified as a numeric GID or group name.
+ *
+ * @param group group name or numeric GID.
+ * @return decoded GID.
  */
 gid_t util_parse_group(const char *group)
 {
@@ -59,6 +69,12 @@ gid_t util_parse_group(const char *group)
 
 /**
  * IPv4/IPv6 address and port to textual representation.
+ *
+ * @param addr    IP socket address.
+ * @param addrlen socket address length.
+ * @param buffer  buffer for text.
+ * @param bufsize buffer size.
+ * @return number of characters written, or -1 on error.
  */
 int util_decode_addr(const struct sockaddr *addr, socklen_t addrlen,
                      char *buffer, size_t bufsize)
@@ -73,6 +89,13 @@ int util_decode_addr(const struct sockaddr *addr, socklen_t addrlen,
 
 /**
  * IPv4/IPv6 network to textual representation.
+ *
+ * @param addr    IP network addrsss.
+ * @param addrlen network address length.
+ * @param bits    network bitmask width.
+ * @param buffer  buffer for text.
+ * @param bufsize buffer size.
+ * @return number of characters written, or -1 on error.
  */
 int util_decode_network(const struct sockaddr *addr, socklen_t addrlen,
                         unsigned bits, char *buffer, size_t bufsize)
@@ -87,7 +110,18 @@ int util_decode_network(const struct sockaddr *addr, socklen_t addrlen,
         ((addr->sa_family == AF_INET) ? "%s/%u" : "[%s]/%u"), host, bits);
 }
 
-ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_t buflen)
+/**
+ * Encode data to Base64.
+ *
+ * Note that the result is not NUL-terminated.
+ *
+ * @param data    data to encode.
+ * @param datalen data length.
+ * @param buffer  buffer for Base64.
+ * @param bufsize buffer size.
+ * @return number of characters written, or -1 on error.
+ */
+ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_t bufsize)
 {
     const unsigned char *dptr = data;
     size_t reslen = 0;
@@ -99,7 +133,7 @@ ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_
         triplet = (triplet << 8)|(*dptr++);
         if (++cnt == 3)
         {
-            if ((buflen - reslen) < 4)
+            if ((bufsize - reslen) < 4)
                 return -1;
             *buffer++ = BASE64_ALPHA[(triplet >> 18) & 0x3F];
             *buffer++ = BASE64_ALPHA[(triplet >> 12) & 0x3F];
@@ -112,7 +146,7 @@ ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_
     }
     if (cnt != 0)
     {
-        if ((buflen - reslen) < 4)
+        if ((bufsize - reslen) < 4)
             return -1;
         if (cnt == 2)
         {
@@ -133,7 +167,15 @@ ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_
     return reslen;
 }
 
-ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
+/**
+ * Decode from Base64.
+ *
+ * @param text    Base64 text (NUL-terminated).
+ * @param buffer  buffer for data.
+ * @param bufsize buffer size.
+ * @return number of data bytes, or -1 on error.
+ */
+ssize_t util_base64_decode(const char *text, void *buffer, size_t bufsize)
 {
     unsigned char *rptr = buffer;
     size_t rlen = 0;
@@ -155,7 +197,7 @@ ssize_t util_base64_decode(const char *text, void *buffer, size_t buflen)
         prefix = (prefix << 6)|(ch & 0x3F);
         if ((bits += 6) >= 8)
         {
-            if (buflen <= rlen)
+            if (bufsize <= rlen)
                 return -1;
             *rptr++ = (prefix >> (bits - 8)) & 0xFF;
             rlen++;

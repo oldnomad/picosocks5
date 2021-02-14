@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Crypto functions (GnuTLS).
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>

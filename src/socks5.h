@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Definitions for proxy functions.
+ */
+
 int socks_set_bind_if(const char *host);
 void socks_set_maxconn(unsigned long maxconn);
 void socks_set_timeout(time_t sec, suseconds_t usec);

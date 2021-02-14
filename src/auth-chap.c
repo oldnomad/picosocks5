@@ -1,3 +1,7 @@
+/**
+ * @file
+ * CHAP (draft-ietf-aft-socks-chap-01.txt) authentication method functions
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -14,24 +18,38 @@
 #include "crypto.h"
 #include "util.h"
 
-#define CHALLENGE_LENGTH 128 // Challenge bytes
+#define CHALLENGE_LENGTH 128 ///< Challenge size in bytes
 
+/**
+ * State of CHAP authentication
+ */
 enum chap_state {
-    CHAP_ALGO = 0,     // Waiting for algorithms
-    CHAP_GOT_ALGO,     // Got algorithms, send selected algorithm and challenge
-    CHAP_CHALLENGE,    // Sent challenge, waiting for response
-    CHAP_GOT_RESPONSE, // Got response, send client auth status
-    CHAP_SERVER_AUTH,  // Sent client auth status with server response, waiting for server auth status
-    CHAP_DONE          // Authentication finished successfully
+    CHAP_ALGO = 0,     ///< Waiting for algorithms
+    CHAP_GOT_ALGO,     ///< Got algorithms, send selected algorithm and challenge
+    CHAP_CHALLENGE,    ///< Sent challenge, waiting for response
+    CHAP_GOT_RESPONSE, ///< Got response, send client auth status
+    CHAP_SERVER_AUTH,  ///< Sent client auth status with server response, waiting for server auth status
+    CHAP_DONE          ///< Authentication finished successfully
 };
 
+/**
+ * Internal CHAP authentication state
+ */
 struct chap_data {
-    enum chap_state   state; // Currentt authentication state
-    const authuser_t *user;  // User to authenticate
-    unsigned char     challenge[CHALLENGE_LENGTH]; // Challenge sent to client
+    enum chap_state   state; ///< Current authentication state
+    const authuser_t *user;  ///< User to authenticate
+    unsigned char     challenge[CHALLENGE_LENGTH]; ///< Challenge sent to client
 };
 
 #if HAVE_CRYPTO_HMACMD5
+/**
+ * Find secret for specified user.
+ *
+ * @param logprefix prefix for logging messages.
+ * @param user      user name (not NUL-terminated).
+ * @param ulen      length of user name.
+ * @return user secret, or NULL if not found.
+ */
 static const authuser_t *chap_find_user(const char *logprefix, const unsigned char *user, size_t ulen)
 {
     // NOTE: ulen is guaranteed to be at most 255
@@ -46,6 +64,14 @@ static const authuser_t *chap_find_user(const char *logprefix, const unsigned ch
     return u;
 }
 
+/**
+ * Respond with CHAP error.
+ *
+ * @param ctxt authentication context.
+ * @param prio log message priority.
+ * @param msg  log message format.
+ * @param ...  log message parameters.
+ */
 static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
 {
     if (msg != NULL)
@@ -71,6 +97,7 @@ static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
 
 /**
  * AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
+ * @copydetails auth_callback_t
  */
 int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
 {
@@ -282,6 +309,7 @@ BAD_STATUS:
 #else // !HAVE_CRYPTO_HMACMD5
 /**
  * DISABLED AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
+ * @copydetails auth_callback_t
  */
 int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
 {
@@ -294,8 +322,9 @@ int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
 
 /**
  * AUTH GENERATOR: Encode a password
+ * @copydetails auth_generator_t
  */
-ssize_t auth_secret_chap(const char *password, char *buffer, size_t bufsize)
+ssize_t auth_secret_chap(const char *secret, char *buffer, size_t bufsize)
 {
     ssize_t seclen;
 
@@ -304,7 +333,7 @@ ssize_t auth_secret_chap(const char *password, char *buffer, size_t bufsize)
     memcpy(buffer, BASE64_PREFIX, BASE64_PREFIX_LEN);
     buffer  += BASE64_PREFIX_LEN;
     bufsize -= BASE64_PREFIX_LEN;
-    if ((seclen = util_base64_encode(password, strlen(password), buffer, bufsize)) < 0)
+    if ((seclen = util_base64_encode(secret, strlen(secret), buffer, bufsize)) < 0)
     {
 TOO_LONG:
         logger(LOG_ERR, "Encoded password is too long");

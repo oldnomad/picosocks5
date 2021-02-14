@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Simple password file format.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -10,11 +14,12 @@
 #include "socks5bits.h"
 #include "util.h"
 
-#define MAX_LINE_LENGTH 1024 // Maximum line length
+#define MAX_LINE_LENGTH 1024 ///< Maximum line length
 
 /**
  * AUTH FILE FORMAT: Text file with lines containing colon-separated
  * username, auth method name, and method-dependent secret.
+ * @copydetails authfile_parser_t
  */
 void authfile_format_password(const char *filespec)
 {

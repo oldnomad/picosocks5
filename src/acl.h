@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Definitions for ACL functions.
+ */
+
 struct sockaddr;
 int acl_check_client_address(const char *group, const struct sockaddr *addr, size_t addrlen);
 int acl_check_request(const char *group, unsigned char type, const struct sockaddr *addr, size_t addrlen);

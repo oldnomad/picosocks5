@@ -48,4 +48,3 @@ cov-int/
 
 # Doxygen artefacts
 src/doc/
-src/doxygen.warn

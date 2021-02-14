@@ -1,4 +1,7 @@
-/*
+/**
+ * @file
+ * Definitions for specific authentication methods.
+ *
  * NOTES ON AUTH METHODS
  *
  * - Each method consists of sub-negotiation stages.

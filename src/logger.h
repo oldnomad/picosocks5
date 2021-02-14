@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Definitions for internal logger.
+ */
+
 int logger_name2mode(const char *name);
 int logger_name2level(const char *name);
 const char *logger_mode2name(int mode);

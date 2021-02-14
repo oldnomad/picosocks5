@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Basic (RFC 1929) authentication method functions
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -12,11 +16,12 @@
 #include "socks5bits.h"
 #include "crypto.h"
 
-#define DEFAULT_SALT_SIZE 8 // Number of salt characters to generate
-static const char DEFAULT_SALT_PREFIX[] = "$6$"; // Default crypt(3) method
+#define DEFAULT_SALT_SIZE 8 ///< Number of salt characters to generate
+static const char DEFAULT_SALT_PREFIX[] = "$6$"; ///< Default crypt(3) method
 
 /**
  * AUTH METHOD: User/password authentication (RFC 1929)
+ * @copydetails auth_callback_t
  */
 int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt)
 {
@@ -71,8 +76,9 @@ MALFORMED:
 
 /**
  * AUTH GENERATOR: Encrypt a password
+ * @copydetails auth_generator_t
  */
-ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
+ssize_t auth_secret_basic(const char *secret, char *buffer, size_t bufsize)
 {
     // Salt alphabet contains 64 symbols, 6 bits per character;
     // 4 characters contain 3 bytes (24 bits) of randomness
@@ -113,7 +119,7 @@ ssize_t auth_secret_basic(const char *password, char *buffer, size_t bufsize)
     }
     *ep++ = '$';
     *ep = '\0';
-    cpass = crypt_r(password, salt, &cdata);
+    cpass = crypt_r(secret, salt, &cdata);
     if (cpass == NULL)
     {
         logger(LOG_ERR, "Encryption error: %m");

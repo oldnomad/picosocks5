@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Utility to create passwords for PicoSOCKS5.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -16,16 +20,22 @@
 #include "util.h"
 #include "socks5bits.h"
 
-#define MAX_PASSWORD_LENGTH  1024 // Max password length (including newline)
-#define MAX_SECRET_SIZE      4096 // Max secret data size
+#define MAX_PASSWORD_LENGTH  1024 ///< Max password length (including newline).
+#define MAX_SECRET_SIZE      4096 ///< Max secret data size.
 
-static const char SHORT_OPTS[] = "m:h";
+static const char SHORT_OPTS[] = "m:h"; ///< Command-line short options.
+/// Command-line long options.
 static const struct option LONG_OPTS[] = {
     { "method",      1, NULL, 'm'  },
     { "help",        0, NULL, 'h'  },
     { NULL }
 };
 
+/**
+ * Print usage note and exit.
+ *
+ * @param bin_name name of this command.
+ */
 static void usage(const char *bin_name)
 {
     //      0        1         2         3         4         5         6         7         8
@@ -43,6 +53,14 @@ static void usage(const char *bin_name)
     exit(2);
 }
 
+/**
+ * Prompt for password and read it.
+ *
+ * @param prompt  prompt text.
+ * @param buffer  buffer for password.
+ * @param bufsize size of buffer.
+ * @return zero on success, or -1 on error.
+ */
 static int prompt_password(const char *prompt, char *buffer, size_t bufsize)
 {
     struct termios oldtc, newtc;
@@ -79,6 +97,13 @@ static int prompt_password(const char *prompt, char *buffer, size_t bufsize)
     return 0;
 }
 
+/**
+ * Ask for password twice and compare.
+ *
+ * @param buffer  buffer for password.
+ * @param bufsize buffer size.
+ * @return zero on success, or -1 on error.
+ */
 static int ask_password(char *buffer, size_t bufsize)
 {
     char *buffer2;
@@ -106,6 +131,13 @@ static int ask_password(char *buffer, size_t bufsize)
     return result;
 }
 
+/**
+ * Main procedure.
+ *
+ * @param argc number od command line parameters.
+ * @param argv array od command line parameters.
+ * @return exit code.
+ */
 int main(int argc, char **argv)
 {
     int opt;

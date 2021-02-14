@@ -1,3 +1,7 @@
+/**
+ * @file
+ * User/secret functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -7,19 +11,28 @@
 #include "authuser.h"
 #include "socks5bits.h"
 
+/**
+ * List item for user/secret pair.
+ */
 struct authuser_container {
     struct authuser_container
-              *next;
-    authuser_t user;
-    char       data[];
+              *next;    ///< Pointer to the next item.
+    authuser_t user;    ///< User/secret descriptor.
+    char       data[];  ///< Constants referred to from the descriptor.
 };
 
 static struct authuser_container
-          *USER_LIST = NULL; // Linked list of users
-static int ANON_ALLOW = 0;   // Allow anonymous method, even if there are non-anon users
+          *USER_LIST = NULL; ///< Linked list of user/secret pairs
+static int ANON_ALLOW = 0;   ///< Flag to allow anonymous method, even if there are non-anon users
 
 /**
  * Add new user
+ *
+ * @param method    authentication method code.
+ * @param username  user name.
+ * @param secret    secret bytes.
+ * @param secretlen secret bytes length.
+ * @return zero on success, or -1 on error.
  */
 int authuser_append(int method, const char *username, const char *secret, size_t secretlen)
 {
@@ -51,7 +64,10 @@ int authuser_append(int method, const char *username, const char *secret, size_t
 }
 
 /**
- * Get current anonymous access state and, optionally, modify it
+ * Get current anonymous access flag and, optionally, modify it
+ *
+ * @param newstate new anonymous access flag, or -1 to avoid setting.
+ * @return old anonymous access flag.
  */
 int authuser_anon_allow(int newstate)
 {
@@ -63,6 +79,9 @@ int authuser_anon_allow(int newstate)
 
 /**
  * Check whether method is allowed
+ *
+ * @param method authentication method code.
+ * @return true if method is allowed.
  */
 int authuser_method_allowed(int method)
 {
@@ -78,6 +97,11 @@ int authuser_method_allowed(int method)
 
 /**
  * Find a user with specified method
+ *
+ * @param method   authentication method code.
+ * @param username user name.
+ * @param cur      if not NULL, continue search after this element.
+ * @return user/secret pair.
  */
 const authuser_t *authuser_find(int method, const char *username, const authuser_t *cur)
 {
@@ -100,6 +124,9 @@ const authuser_t *authuser_find(int method, const char *username, const authuser
 
 /**
  * Find server-side authenticator with specified method
+ *
+ * @param method   authentication method code.
+ * @return user/secret method for server-side authentication.
  */
 const authuser_t *authuser_find_server(int method)
 {

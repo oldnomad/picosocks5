@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Logger functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -7,24 +11,30 @@
 #include <syslog.h>
 #include "logger.h"
 
-#define LOGGER_SYSLOG 0x0001
-#define LOGGER_STDERR 0x0002
+#define LOGGER_SYSLOG 0x0001 ///< Flag for output to syslog(3).
+#define LOGGER_STDERR 0x0002 ///< Flag for output to stderr
 
-static int LOGMODE = LOGGER_STDERR; // Initial value before logger_init
-static int VERBOSITY = LOG_INFO;
+static int LOGMODE = LOGGER_STDERR; ///< Logger mode (flags).
+static int VERBOSITY = LOG_INFO; ///< Logger verbosity.
 
+/**
+ * List of known logger modes.
+ */
 static const struct {
-    int mode;
-    const char *name;
+    int mode;           ///< Mode flags.
+    const char *name;   ///< Mode name.
 } MODES[] = {
     { LOGGER_SYSLOG,               "syslog"   },
     { LOGGER_STDERR,               "stderr"   },
     { LOGGER_SYSLOG|LOGGER_STDERR, "combined" },
     { 0, NULL }
 };
+/**
+ * List of known logger verbosity levels.
+ */
 static const struct {
-    int level;
-    const char *name;
+    int level;          ///< Verbosity level.
+    const char *name;   ///< Level name.
 } LEVELS[] = {
     { 0,           "none"   },
     { LOG_ERR,     "error"  },
@@ -35,6 +45,12 @@ static const struct {
     { 0, NULL }
 };
 
+/**
+ * Find logger mode by name.
+ *
+ * @param name mode name.
+ * @return mode flags, or -1 on error.
+ */
 int logger_name2mode(const char *name)
 {
     int i;
@@ -45,6 +61,12 @@ int logger_name2mode(const char *name)
     return -1;
 }
 
+/**
+ * Find logger mode name by flags.
+ *
+ * @param mode mode flags.
+ * @return mode name, or NULL if not found.
+ */
 const char *logger_mode2name(int mode)
 {
     int i;
@@ -55,6 +77,12 @@ const char *logger_mode2name(int mode)
     return NULL;
 }
 
+/**
+ * Find logger level by name.
+ *
+ * @param name level name.
+ * @return logger level, or -1 if not found.
+ */
 int logger_name2level(const char *name)
 {
     int i;
@@ -65,6 +93,12 @@ int logger_name2level(const char *name)
     return -1;
 }
 
+/**
+ * Find logger level name by value.
+ *
+ * @param level logger level.
+ * @return level name, or NULL if not found.
+ */
 const char *logger_level2name(int level)
 {
     int i;
@@ -75,11 +109,24 @@ const char *logger_level2name(int level)
     return NULL;
 }
 
+/**
+ * Check whether logger mode requires foreground.
+ *
+ * @param mode logger mode.
+ * @return true if logger mode needs foreground.
+ */
 int logger_need_nofork(int mode)
 {
     return (mode & LOGGER_STDERR) != 0;
 }
 
+/**
+ * Initialize logger.
+ *
+ * @param nofork foreground flag.
+ * @param mode   logger mode, or zero for default.
+ * @param level  logger level, or -1 for default.
+ */
 void logger_init(int nofork, int mode, int level)
 {
     LOGMODE = mode;
@@ -91,6 +138,13 @@ void logger_init(int nofork, int mode, int level)
         VERBOSITY = level;
 }
 
+/**
+ * Log message (va_list-style).
+ *
+ * @param prio message priority.
+ * @param msg  message format.
+ * @param args message parameters.
+ */
 void logger_vararg(int prio, const char *msg, va_list args)
 {
     if (prio > VERBOSITY)
@@ -105,6 +159,13 @@ void logger_vararg(int prio, const char *msg, va_list args)
     }
 }
 
+/**
+ * Log message (varargs-style).
+ *
+ * @param prio message priority.
+ * @param msg  message format.
+ * @param ...  message parameters.
+ */
 void logger(int prio, const char *msg, ...)
 {
     va_list args;

@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Common authentication functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -27,10 +31,17 @@ static const auth_method_t AUTH_METHODS[] = {
  * Prefix for Base64 secret encoding
  */
 const char   BASE64_PREFIX[]   = "$base64$";
+/**
+ * Length of prefix for Base64 secret encoding
+ */
 const size_t BASE64_PREFIX_LEN = sizeof(BASE64_PREFIX) - 1;
 
 /**
  * Find a suitable method from client-provided offer
+ *
+ * @param offer    array of offered authentication methods.
+ * @param offerlen length of array of authentication methods.
+ * @return descriptor of selected authentication method, or NULL if no match.
  */
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen)
 {
@@ -48,6 +59,9 @@ const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t of
 
 /**
  * Find authentication method by its name
+ *
+ * @param name name of aithentication method.
+ * @return descriptor of authentication method, or NULL if not found.
  */
 const auth_method_t *auth_find_method(const char *name)
 {
@@ -63,6 +77,8 @@ const auth_method_t *auth_find_method(const char *name)
 
 /**
  * List all known methods.
+ *
+ * @return array of known authentication method descriptors.
  */
 const auth_method_t *auth_all_methods(void)
 {

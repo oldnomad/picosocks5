@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Functions for parsing command line arguments and INI file.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -9,8 +13,14 @@
 #include <getopt.h>
 #include "inifile.h"
 
-#define MAX_LINE_LENGTH 1024
+#define MAX_LINE_LENGTH 1024 ///< Maximum line length.
 
+/**
+ * Skip leading whitespace.
+ *
+ * @param text pointer to text.
+ * @return pointer to first non-whitespace character.
+ */
 static char *skip_space(char *text)
 {
     char *s;
@@ -19,6 +29,13 @@ static char *skip_space(char *text)
     return s;
 }
 
+/**
+ * Skip trailing whitespace.
+ *
+ * @param text   pointer to text.
+ * @param offset offset in text.
+ * @return pointer to the first whitespace before the offset.
+ */
 static char *last_space(char *text, size_t offset)
 {
     char *s;
@@ -27,6 +44,13 @@ static char *last_space(char *text, size_t offset)
     return s;
 }
 
+/**
+ * Find option by parameter name.
+ *
+ * @param optlist option list.
+ * @param param   parameter name.
+ * @return option descriptor, or NULL if not found.
+ */
 static const ini_option_t *findopt_by_name(const ini_option_t *optlist, const char *param)
 {
     const ini_option_t *opt;
@@ -37,6 +61,13 @@ static const ini_option_t *findopt_by_name(const ini_option_t *optlist, const ch
     return NULL;
 }
 
+/**
+ * Find option by option character.
+ *
+ * @param optlist option list.
+ * @param optchar option character.
+ * @return option descriptor, or NULL if not found.
+ */
 static const ini_option_t *findopt_by_optchar(const ini_option_t *optlist, char optchar)
 {
     const ini_option_t *opt;
@@ -49,6 +80,10 @@ static const ini_option_t *findopt_by_optchar(const ini_option_t *optlist, char 
 
 /**
  * Report error in INI-file or command line parsing.
+ *
+ * @param ctxt option parsing context.
+ * @param fmt  message format.
+ * @param ...  message parameters.
  */
 __attribute__(( __format__(__printf__, 2, 3) ))
 void ini_error(const ini_context_t *ctxt, const char *fmt, ...)
@@ -67,6 +102,11 @@ void ini_error(const ini_context_t *ctxt, const char *fmt, ...)
 
 /**
  * Load and parse INI-file.
+ *
+ * @param filename path to INI file.
+ * @param callback section callback.
+ * @param context  callback context.
+ * @return zero on success, or -1 on error.
  */
 int ini_load(const char *filename, ini_section_cbk_t callback, void *context)
 {
@@ -192,6 +232,12 @@ int ini_load(const char *filename, ini_section_cbk_t callback, void *context)
 
 /**
  * Load and parse command-line arguments.
+ *
+ * @param argc     number of command line parameters.
+ * @param argv     array of command line parameters.
+ * @param callback section callback.
+ * @param context  callback context.
+ * @return zero on success, or -1 on error.
  */
 int ini_args(int argc, char **argv, ini_section_cbk_t callback, void *context)
 {

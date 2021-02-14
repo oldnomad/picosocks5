@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Parsing command line.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -17,9 +21,13 @@
 #include "inifile.h"
 #include "cmdline.h"
 
-#define DEFAULT_LISTEN_SERVICE "1080"
-#define MAX_TIMEOUT_VALUE 3600.0 // seconds
+#define DEFAULT_LISTEN_SERVICE "1080" ///< Default listen port
+#define MAX_TIMEOUT_VALUE 3600.0 ///< Maximum timeout value, seconds
 
+///@{
+/**
+ * Processing functions for parameters.
+ */
 static int process_include  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_nofork   (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_logmode  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -36,7 +44,11 @@ static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_group    (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_help     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_version  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+///@}
 
+/**
+ * Options list for common section.
+ */
 static const ini_option_t COMMON_SECTION[] = {
     { "include",   "config",    'c', INI_TYPE_PLAIN,   process_include   },
     { "nofork",    "nofork",      0, INI_TYPE_BOOLEAN, process_nofork    },
@@ -57,6 +69,9 @@ static const ini_option_t COMMON_SECTION[] = {
     { NULL }
 };
 
+/**
+ * Help text with options description.
+ */
 static const char OPTIONS_DESC[] =
     //        1         2         3         4         5         7
     //23456789012345678901234567890123456789012345678901234567890123567890
@@ -119,6 +134,9 @@ static const char OPTIONS_DESC[] =
     "        Print usage information and exit.\n\n"
     "    -V, --version\n"
     "        Print daemon version and exit.\n";
+/**
+ * Help text with positional parameters description.
+ */
 static const char ARG_DESC[] =
     //        1         2         3         4         5         7
     //23456789012345678901234567890123456789012345678901234567890123567890
@@ -129,6 +147,10 @@ static const char ARG_DESC[] =
     "service name.\n\n"
     "By default \"*:1080\" is used.\n";
 
+/**
+ * Section change callback.
+ * @copydetails ini_section_cbk_t
+ */
 static const ini_option_t *section_callback(const ini_context_t *ctxt)
 {
     if (ctxt->section != NULL)
@@ -136,6 +158,12 @@ static const ini_option_t *section_callback(const ini_context_t *ctxt)
     return COMMON_SECTION;
 }
 
+/**
+ * Convert value text to boolean.
+ *
+ * @param value text to convert.
+ * @return true or false.
+ */
 static int value2bool(const char *value)
 {
     if (value == NULL)
@@ -473,11 +501,23 @@ static int process_version(const ini_context_t *ctxt, const ini_option_t *opt, c
     return 0;
 }
 
+/**
+ * Get full version string.
+ *
+ * @return full version string.
+ */
 const char *cmdline_version(void)
 {
     return PACKAGE_NAME " " PACKAGE_VERSION;
 }
 
+/**
+ * Process command line parameters.
+ *
+ * @param argc number of command line parameters.
+ * @param argv array of command line parameters.
+ * @param cfg  configuration to fill.
+ */
 void cmdline_process(int argc, char **argv, daemon_config_t *cfg)
 {
     int ret;

@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Authentication source functions.
+ */
 #include "config.h"
 #define _GNU_SOURCE
 #include <unistd.h>
@@ -13,8 +17,10 @@ static const authfile_format_t FILE_FORMATS[] = {
 };
 
 /**
- * Parse auth file: detect prefix and pass the filespec tail to
- * corresponding format parser
+ * Parse authentication source.
+ * This function detects prefix and passes the filespec tail to corresponding format parser.
+ *
+ * @param filespec authentication source with (optional) prefix.
  */
 void authfile_parse(const char *filespec)
 {
