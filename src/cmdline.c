@@ -27,6 +27,7 @@
 ///@{
 /**
  * Processing functions for parameters.
+ * @copydetails ini_param_cbk_t
  */
 static int process_include  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_nofork   (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
