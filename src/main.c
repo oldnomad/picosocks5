@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     socks_show_config();
     if (CONFIG.nofork == 0)
         daemonize(CONFIG.drop_gid, CONFIG.drop_uid);
-    logger(LOG_INFO, "Running %s", cmdline_version());
+    logger(LOG_INFO, "Running %s", PACKAGE_STRING);
     socks_accept_loop(nfds, &fds);
     if (EXIT_SIGNO != 0)
         logger(LOG_ERR, "Received signal %d, exiting", EXIT_SIGNO);

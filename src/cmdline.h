@@ -17,5 +17,4 @@ typedef struct {
     char       *listen_service; ///< Port to listen on, or null for default
 } daemon_config_t;
 
-extern const char *cmdline_version(void);
-extern void        cmdline_process(int argc, char **argv, daemon_config_t *cfg);
+extern void cmdline_process(int argc, char **argv, daemon_config_t *cfg);

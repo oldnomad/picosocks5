@@ -487,7 +487,7 @@ static int process_help(const ini_context_t *ctxt, const ini_option_t *opt, cons
     printf("%s\n\n"
            "Usage: %s [<option>...] [<listen-address>:<listen-port>]\n\n"
            "%s\n%s",
-           cmdline_version(), cfg->progname, ARG_DESC, OPTIONS_DESC);
+           PACKAGE_STRING, cfg->progname, ARG_DESC, OPTIONS_DESC);
     exit(0);
     return 0;
 }
@@ -497,19 +497,9 @@ static int process_version(const ini_context_t *ctxt, const ini_option_t *opt, c
     (void)ctxt;
     (void)opt;
     (void)value;
-    printf("%s\n%s\n", cmdline_version(), PACKAGE_COPYRIGHT);
+    printf("%s\n%s\n", PACKAGE_STRING, PACKAGE_COPYRIGHT);
     exit(0);
     return 0;
-}
-
-/**
- * Get full version string.
- *
- * @return full version string.
- */
-const char *cmdline_version(void)
-{
-    return PACKAGE_NAME " " PACKAGE_VERSION;
 }
 
 /**
