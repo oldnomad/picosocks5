@@ -2,14 +2,7 @@
  * @file
  * Crypto functions (emulated).
  */
-#include "config.h"
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <stdlib.h>
-#include <syslog.h>
 #include <time.h>
-#include "crypto.h"
-#include "logger.h"
 
 /*
  * NOTE: Functions in this file generate low-quality random nonce.

@@ -55,29 +55,28 @@ AC_SEARCH_LIBS(crypt_r, [crypt],
                [], [AC_MSG_ERROR([missing crypt_r implementation])])
 
 CRYPTO_LIBS=
-CRYPTO_MODULE="crypto-emul.\$(OBJEXT)"
+CRYPTO_MODULE="emul"
 CRYPTO_HMACMD5=
 AS_IF([test -z "$CRYPTO_LIBS" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xgnutls \)],
       [AC_CHECK_LIB([gnutls], [gnutls_check_version],
                     [CRYPTO_LIBS="-lgnutls"
-                     CRYPTO_MODULE="crypto-gnutls.\$(OBJEXT)"
+                     CRYPTO_MODULE="gnutls"
                      CRYPTO_HMACMD5="yes"
                     ])
       ])
 AS_IF([test -z "$CRYPTO_LIBS" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xopenssl \)],
       [AC_CHECK_LIB([ssl], [SSL_CTX_new],
                     [CRYPTO_LIBS="-lssl -lcrypto"
-                     CRYPTO_MODULE="crypto-openssl.\$(OBJEXT)"
+                     CRYPTO_MODULE="openssl"
                      AC_CHECK_LIB([crypto], [EVP_md5], [CRYPTO_HMACMD5="yes"])
                     ])
       ])
 AS_IF([test -z "$CRYPTO_MODULE" -a "x$want_crypto" != xno],
       [AC_MSG_ERROR([unknown cryptographic library '$want_crypto' specified])])
+
 AS_IF([test "x$CRYPTO_HMACMD5" = xyes ],
-      [AC_DEFINE([HAVE_CRYPTO_LIB], [1], [Use cryptographic methods])
-       AS_IF([test "x$CRYPTO_HMACMD5" = xyes],
-             [AC_DEFINE([HAVE_CRYPTO_HMACMD5], [1], [Use HMAC-MD5 (RFC 2104, RFC 1321)])])
-       LIBS="$CRYPTO_LIBS $LIBS"])
-AC_SUBST([CRYPTO_MODULE])
+      [AC_DEFINE([HAVE_CRYPTO_HMACMD5], [1], [Use HMAC-MD5 (RFC 2104, RFC 1321)])])
+LIBS="$CRYPTO_LIBS $LIBS"
+AC_DEFINE_UNQUOTED([HAVE_CRYPTO_MODULE], [$CRYPTO_MODULE], [Crypto module to use])
 
 AC_OUTPUT

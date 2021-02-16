@@ -2,16 +2,10 @@
  * @file
  * Crypto functions (OpenSSL).
  */
-#include "config.h"
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <syslog.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
-#include "crypto.h"
-#include "logger.h"
 
 void crypto_init(void)
 {

@@ -2,15 +2,8 @@
  * @file
  * Crypto functions (GnuTLS).
  */
-#include "config.h"
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <stdlib.h>
-#include <syslog.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
-#include "crypto.h"
-#include "logger.h"
 
 void crypto_init(void)
 {
