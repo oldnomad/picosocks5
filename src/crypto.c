@@ -14,8 +14,11 @@
 #define HAVE_CRYPTO_MODULE emul
 #endif
 
+/// Stringize.
 #define HDR0(x) #x
+/// Escape stringizing.
 #define HDR(x)  HDR0(x)
+/// Concatenate source file name.
 #define INC     crypto-HAVE_CRYPTO_MODULE.c
 
 #include HDR(INC)
