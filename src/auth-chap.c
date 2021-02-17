@@ -319,25 +319,3 @@ int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
     return -1;
 }
 #endif // HAVE_CRYPTO_HMACMD5
-
-/**
- * AUTH GENERATOR: Encode a password
- * @copydetails auth_generator_t
- */
-ssize_t auth_secret_chap(const char *secret, char *buffer, size_t bufsize)
-{
-    ssize_t seclen;
-
-    if (bufsize <= BASE64_PREFIX_LEN)
-        goto TOO_LONG;
-    memcpy(buffer, BASE64_PREFIX, BASE64_PREFIX_LEN);
-    buffer  += BASE64_PREFIX_LEN;
-    bufsize -= BASE64_PREFIX_LEN;
-    if ((seclen = util_base64_encode(secret, strlen(secret), buffer, bufsize)) < 0)
-    {
-TOO_LONG:
-        logger(LOG_ERR, "Encoded password is too long");
-        return -1;
-    }
-    return seclen + BASE64_PREFIX_LEN;
-}

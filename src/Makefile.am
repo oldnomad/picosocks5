@@ -7,8 +7,7 @@ picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c crypto.c \
     auth.c authuser.c auth-basic.c auth-chap.c \
     authfile.c authfile-password.c
 
-pis5user_SOURCES = pis5-user.c logger.c util.c crypto.c \
-    auth.c authuser.c auth-basic.c auth-chap.c
+pis5user_SOURCES = pis5-user.c logger.c util.c crypto.c
 
 if HAVE_PANDOC
 man1_MANS = pis5user.man

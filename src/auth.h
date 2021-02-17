@@ -30,15 +30,6 @@ typedef struct {
  * @return zero when complete, or +1 to continue, or -1 on error.
  */
 typedef int (*auth_callback_t)(const char *logprefix, int stage, auth_context_t *ctxt);
-/**
- * Function type for authentication secret generator.
- *
- * @param secret  secret text.
- * @param buffer  buffer for secret data.
- * @param bufsize size of buffer.
- * @return size of generated data, or -1 on error.
- */
-typedef ssize_t (*auth_generator_t)(const char *secret, char *buffer, size_t bufsize);
 
 /**
  * Authentication method descriptor.
@@ -47,12 +38,7 @@ typedef struct {
     int method;                   ///< Method code
     const char *name;             ///< Method name
     auth_callback_t callback;     ///< Method stage callback
-    auth_generator_t generator;   ///< Method secret generator
 } auth_method_t;
 
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);
 const auth_method_t *auth_find_method(const char *name);
-const auth_method_t *auth_all_methods(void);
-
-extern const char   BASE64_PREFIX[];
-extern const size_t BASE64_PREFIX_LEN;

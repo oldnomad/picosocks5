@@ -16,9 +16,6 @@
 #include "socks5bits.h"
 #include "crypto.h"
 
-#define DEFAULT_SALT_SIZE 8 ///< Number of salt characters to generate
-static const char DEFAULT_SALT_PREFIX[] = "$6$"; ///< Default crypt(3) method
-
 /**
  * AUTH METHOD: User/password authentication (RFC 1929)
  * @copydetails auth_callback_t
@@ -73,65 +70,3 @@ MALFORMED:
     ctxt->response_length = 2;
     return u == NULL ? -1 : 0;
 }
-
-/**
- * AUTH GENERATOR: Encrypt a password
- * @copydetails auth_generator_t
- */
-ssize_t auth_secret_basic(const char *secret, char *buffer, size_t bufsize)
-{
-    // Salt alphabet contains 64 symbols, 6 bits per character;
-    // 4 characters contain 3 bytes (24 bits) of randomness
-    static const char ALPHABET[] = "ABCDEFGHIJKLMNOP"
-                                   "QRSTUVWXYZabcdef"
-                                   "ghijklmnopqrstuv"
-                                   "wxyz0123456789/.";
-    struct crypt_data cdata;
-    char salt[sizeof(DEFAULT_SALT_PREFIX) + DEFAULT_SALT_SIZE + 1], *ep;
-    const char *cpass;
-    unsigned char randval[(DEFAULT_SALT_SIZE*3 + 2)/4];
-    unsigned rval = 0;
-    size_t csize;
-    int i, j;
-
-    memcpy(salt, DEFAULT_SALT_PREFIX, sizeof(DEFAULT_SALT_PREFIX) - 1);
-    ep = &salt[sizeof(DEFAULT_SALT_PREFIX) - 1];
-    crypto_generate_nonce(randval, sizeof(randval));
-    rval = 0;
-    for (i = 0, j = 0; i < DEFAULT_SALT_SIZE; i++)
-    {
-        switch (i % 4)
-        {
-        case 0:
-            rval = randval[j++];
-            break;
-        case 1:
-            rval = rval|(((unsigned)randval[j++]) << 2);
-            break;
-        case 2:
-            rval = rval|(((unsigned)randval[j++]) << 4);
-            break;
-        case 3:
-            break;
-        }
-        *ep++ = ALPHABET[rval & 0x3F];
-        rval >>= 6;
-    }
-    *ep++ = '$';
-    *ep = '\0';
-    cpass = crypt_r(secret, salt, &cdata);
-    if (cpass == NULL)
-    {
-        logger(LOG_ERR, "Encryption error: %m");
-        return -1;
-    }
-    csize = strlen(cpass);
-    if (bufsize < csize)
-    {
-        logger(LOG_ERR, "Encrypted password is too long");
-        return -1;
-    }
-    memcpy(buffer, cpass, csize);
-    return csize;
-}
-

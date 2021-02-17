@@ -11,6 +11,7 @@
 #include "auth.h"
 #include "authuser.h"
 #include "authfile.h"
+#include "crypto.h"
 #include "socks5bits.h"
 #include "util.h"
 

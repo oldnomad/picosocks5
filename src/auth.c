@@ -16,25 +16,12 @@
  */
 static const auth_method_t AUTH_METHODS[] = {
 #if HAVE_CRYPTO_HMACMD5
-    { SOCKS_AUTH_CHAP,    "chap",
-      .callback  = auth_method_chap,
-      .generator = auth_secret_chap },
+    { SOCKS_AUTH_CHAP,    "chap",  auth_method_chap  },
 #endif // HAVE_CRYPTO_HMACMD5
-    { SOCKS_AUTH_BASIC,   "basic",
-      .callback  = auth_method_basic,
-      .generator = auth_secret_basic },
-    { SOCKS_AUTH_NONE,    NULL, NULL, NULL },
-    { SOCKS_AUTH_INVALID, NULL, NULL, NULL }
+    { SOCKS_AUTH_BASIC,   "basic", auth_method_basic },
+    { SOCKS_AUTH_NONE,    NULL,    NULL },
+    { SOCKS_AUTH_INVALID, NULL,    NULL }
 };
-
-/**
- * Prefix for Base64 secret encoding
- */
-const char   BASE64_PREFIX[]   = "$base64$";
-/**
- * Length of prefix for Base64 secret encoding
- */
-const size_t BASE64_PREFIX_LEN = sizeof(BASE64_PREFIX) - 1;
 
 /**
  * Find a suitable method from client-provided offer
@@ -73,14 +60,4 @@ const auth_method_t *auth_find_method(const char *name)
         if (m->name != NULL && strcmp(name, m->name) == 0)
             return m;
     return NULL;
-}
-
-/**
- * List all known methods.
- *
- * @return array of known authentication method descriptors.
- */
-const auth_method_t *auth_all_methods(void)
-{
-    return AUTH_METHODS;
 }

@@ -36,3 +36,6 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
                     unsigned char *res, size_t reslen);
 
 #endif // HAVE_CRYPTO_HMACMD5
+
+extern const char   BASE64_PREFIX[];
+extern const size_t BASE64_PREFIX_LEN;
