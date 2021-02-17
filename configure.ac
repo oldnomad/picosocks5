@@ -54,25 +54,37 @@ AC_SEARCH_LIBS(pthread_create, [pthread],
 AC_SEARCH_LIBS(crypt_r, [crypt],
                [], [AC_MSG_ERROR([missing crypt_r implementation])])
 
+CRYPTO_MODULE=
 CRYPTO_LIBS=
-CRYPTO_MODULE="emul"
 CRYPTO_HMACMD5=
-AS_IF([test -z "$CRYPTO_LIBS" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xgnutls \)],
-      [AC_CHECK_LIB([gnutls], [gnutls_check_version],
-                    [CRYPTO_LIBS="-lgnutls"
-                     CRYPTO_MODULE="gnutls"
+# Checking for crypto modules
+AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xgnutls \)],
+      [AC_MSG_NOTICE([checking for GnuTLS crypto module])
+       AC_CHECK_LIB([gnutls], [gnutls_check_version],
+                    [CRYPTO_MODULE="gnutls"
+                     CRYPTO_LIBS="-lgnutls"
                      CRYPTO_HMACMD5="yes"
                     ])
       ])
-AS_IF([test -z "$CRYPTO_LIBS" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xopenssl \)],
-      [AC_CHECK_LIB([ssl], [SSL_CTX_new],
-                    [CRYPTO_LIBS="-lssl -lcrypto"
-                     CRYPTO_MODULE="openssl"
+AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xopenssl \)],
+      [AC_MSG_NOTICE([checking for OpenSSL crypto module])
+       AC_CHECK_LIB([ssl], [SSL_CTX_new],
+                    [CRYPTO_MODULE="openssl"
+                     CRYPTO_LIBS="-lssl -lcrypto"
                      AC_CHECK_LIB([crypto], [EVP_md5], [CRYPTO_HMACMD5="yes"])
                     ])
       ])
-AS_IF([test -z "$CRYPTO_MODULE" -a "x$want_crypto" != xno],
-      [AC_MSG_ERROR([unknown cryptographic library '$want_crypto' specified])])
+### ADD CUSTOM CRYPTO MODULES BELOW
+### END OF CUSTOM CRYPTO MODULES
+# Default crypto module
+AS_IF([test -z "$CRYPTO_MODULE"],
+      [AS_IF([test "x$want_crypto" != xno],
+             [AC_MSG_ERROR([unknown cryptographic library '$want_crypto' specified])],
+             [AC_MSG_NOTICE([no crypto module, using POSIX version])
+              CRYPTO_MODULE="emul"
+              CRYPTO_LIBS=
+              CRYPTO_HMACMD5=])
+      ])
 
 AS_IF([test "x$CRYPTO_HMACMD5" = xyes ],
       [AC_DEFINE([HAVE_CRYPTO_HMACMD5], [1], [Use HMAC-MD5 (RFC 2104, RFC 1321)])])
