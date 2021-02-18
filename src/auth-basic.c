@@ -8,26 +8,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <crypt.h>
 #include "logger.h"
 #include "auth.h"
-#include "authuser.h"
+#include "authfile.h"
 #include "authmethod.h"
-#include "socks5bits.h"
-#include "crypto.h"
 
 /**
- * AUTH METHOD: User/password authentication (RFC 1929)
+ * Basic authentication method callback.
  * @copydetails auth_callback_t
  */
 int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt)
 {
-    const char *user, *pass, *cpass;
+    const unsigned char *pass;
     size_t ulen, plen;
-    const struct auth_user *u;
-    struct crypt_data cdata;
-    char copy[256 + 256];
+    char user[256];
+    const void *source;
+    int auth_ok = 0;
 
+    if (stage == -1)
+        return authfile_supported(AUTHFILE_LOGIN) ? 0 : -1;
     if (stage != 0)
     {
         logger(LOG_WARNING, "<%s> Too many stages for basic auth", logprefix);
@@ -44,21 +43,22 @@ MALFORMED:
     plen = ctxt->challenge[2 + ulen];
     if ((ulen + plen + 3) > ctxt->challenge_length)
         goto MALFORMED;
-    memcpy(copy, &ctxt->challenge[2], ulen + plen + 1);
-    copy[ulen] = '\0';
-    copy[ulen + 1 + plen] = '\0';
-    user = copy;
-    pass = &user[ulen + 1];
+    memcpy(user, &ctxt->challenge[2], ulen);
+    user[ulen] = '\0';
+    pass = &ctxt->challenge[3 + ulen];
 
-    u = NULL;
-    while ((u = authuser_find(SOCKS_AUTH_BASIC, user, u)) != NULL)
+    if ((source = authfile_find_user(user)) != NULL &&
+        authfile_callback(source, AUTHFILE_LOGIN, user, pass, plen, NULL, 0) >= 0)
     {
-        cpass = crypt_r(pass, u->secret, &cdata);
-        if (cpass != NULL && strcmp(cpass, u->secret) == 0)
-            break;
+        if (ctxt->username != NULL)
+            free(ctxt->username);
+        if ((ctxt->username = strdup(user)) == NULL)
+        {
+            logger(LOG_WARNING, "<%s> Not enough memory for username", logprefix);
+            return -1;
+        }
+        auth_ok = 1;
     }
-    if (u != NULL)
-        ctxt->username = u->username;
 
     if (ctxt->response_maxlen < 2)
     {
@@ -66,7 +66,7 @@ MALFORMED:
         return -1;
     }
     ctxt->response[0] = 0x01;
-    ctxt->response[1] = u == NULL ? 0x01 : 0x00;
+    ctxt->response[1] = auth_ok ? 0x00 : 0x01;
     ctxt->response_length = 2;
-    return u == NULL ? -1 : 0;
+    return auth_ok ? 0 : -1;
 }

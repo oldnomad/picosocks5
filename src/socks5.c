@@ -32,7 +32,7 @@
 typedef struct {
     int socket;                     ///< Client socket
 
-    const char *username;           ///< Authenticated user (if any)
+    char *username;                 ///< Authenticated user (if any)
     void *authdata;                 ///< Additional malloc'ed data (if any)
 
     struct sockaddr_storage local;  ///< Local address and port
@@ -801,6 +801,8 @@ ON_ERROR:
     close(conn.socket);
     if (conn.authdata != NULL)
         free(conn.authdata);
+    if (conn.username != NULL)
+        free(conn.username);
     socks_client_conn_dec();
     return NULL;
 }

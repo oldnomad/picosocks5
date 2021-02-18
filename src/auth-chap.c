@@ -11,12 +11,10 @@
 #include <syslog.h>
 #include "logger.h"
 #include "auth.h"
-#include "authuser.h"
-#include "authmethod.h"
 #include "authfile.h"
+#include "authmethod.h"
 #include "socks5bits.h"
 #include "crypto.h"
-#include "util.h"
 
 #define CHALLENGE_LENGTH 128 ///< Challenge size in bytes
 
@@ -36,34 +34,13 @@ enum chap_state {
  * Internal CHAP authentication state
  */
 struct chap_data {
-    enum chap_state   state; ///< Current authentication state
-    const authuser_t *user;  ///< User to authenticate
+    enum chap_state   state;         ///< Current authentication state
+    const void       *source;        ///< Source for user authentication
+    char              username[256]; ///< User name.
     unsigned char     challenge[CHALLENGE_LENGTH]; ///< Challenge sent to client
 };
 
 #if HAVE_CRYPTO_HMACMD5
-/**
- * Find secret for specified user.
- *
- * @param logprefix prefix for logging messages.
- * @param user      user name (not NUL-terminated).
- * @param ulen      length of user name.
- * @return user secret, or NULL if not found.
- */
-static const authuser_t *chap_find_user(const char *logprefix, const unsigned char *user, size_t ulen)
-{
-    // NOTE: ulen is guaranteed to be at most 255
-    char uname[256];
-    const authuser_t *u;
-
-    memcpy(uname, user, ulen);
-    uname[ulen] = '\0';
-    u = authuser_find(SOCKS_AUTH_CHAP, uname, NULL);
-    if (u == NULL)
-        logger(LOG_WARNING, "<%s> CHAP user ID '%s' not found", logprefix, uname);
-    return u;
-}
-
 /**
  * Respond with CHAP error.
  *
@@ -96,7 +73,7 @@ static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
 }
 
 /**
- * AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
+ * CHAP authentication method callback.
  * @copydetails auth_callback_t
  */
 int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
@@ -104,9 +81,10 @@ int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
     struct chap_data *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
     size_t dlen, nattr, navas, alen, cresp_len = 0, cchal_len = 0;
-    unsigned char attr, hash[CRYPTO_MD5_SIZE];
-    const authuser_t *u;
+    unsigned char attr;
 
+    if (stage == -1)
+        return authfile_supported(AUTHFILE_HMAC_MD5_RESPONSE) ? 0 : -1;
     if (stage == 0)
     {
         if ((chap = malloc(sizeof(*chap))) == NULL)
@@ -114,8 +92,9 @@ int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
             logger(LOG_ERR, "<%s> Not enough memory for CHAP", logprefix);
             return -1;
         }
-        chap->state = CHAP_ALGO;
-        chap->user  = NULL;
+        chap->state       = CHAP_ALGO;
+        chap->source      = NULL;
+        chap->username[0] = '\0';
         ctxt->authdata = chap;
     }
     else
@@ -162,22 +141,32 @@ ON_MALFORMED:
             chap->state = CHAP_GOT_ALGO;
             break;
         case SOCKS_CHAP_ATTR_USERID:
-            u = chap_find_user(logprefix, dptr, alen);
-            if (u == NULL)
             {
-                chap_error(ctxt, 0, NULL);
-                return -1;
-            }
-            if (chap->user != NULL)
-            {
-                if (chap->user != u)
+                // NOTE: ulen is guaranteed to be at most 255
+                char uname[256];
+                const void *handle;
+
+                memcpy(uname, dptr, alen);
+                uname[alen] = '\0';
+                handle = authfile_find_user(uname);
+                if (handle == NULL)
                 {
-                    chap_error(ctxt, LOG_WARNING, "<%s> CHAP user renegotiation attempt", logprefix);
+                    logger(LOG_WARNING, "<%s> CHAP user ID '%s' not found", logprefix, uname);
+                    chap_error(ctxt, 0, NULL);
                     return -1;
                 }
-                break;
+                if (chap->source != NULL)
+                {
+                    if (strcmp(chap->username, uname) != 0)
+                    {
+                        chap_error(ctxt, LOG_WARNING, "<%s> CHAP user renegotiation attempt", logprefix);
+                        return -1;
+                    }
+                    break;
+                }
+                chap->source = handle;
+                memcpy(chap->username, uname, alen + 1);
             }
-            chap->user = u;
             break;
         case SOCKS_CHAP_ATTR_RESPONSE:
             if (chap->state != CHAP_CHALLENGE)
@@ -231,6 +220,12 @@ BAD_STATUS:
     case CHAP_SERVER_AUTH: // Still waiting for server auth status
         break;
     case CHAP_GOT_ALGO: // Got algorithms, send selected algorithm
+        if (authfile_callback(chap->source, AUTHFILE_HMAC_MD5_CHALLENGE, chap->username,
+                              NULL, 0, chap->challenge, sizeof(chap->challenge)) < 0)
+        {
+            chap_error(ctxt, LOG_WARNING, "<%s> CHAP challenge failed", logprefix);
+            return -1;
+        }
         // Length: 2 (prefix) + 3 (algo attr) + 2 (chal attr) + CHALLENGE_LENGTH
         if (ctxt->response_maxlen < (7 + CHALLENGE_LENGTH))
         {
@@ -244,25 +239,18 @@ BAD_STATUS:
         ctxt->response[4] = SOCKS_CHAP_ALGO_HMAC_MD5;
         ctxt->response[5] = SOCKS_CHAP_ATTR_CHALLENGE;
         ctxt->response[6] = CHALLENGE_LENGTH;
-        crypto_generate_nonce(chap->challenge, sizeof(chap->challenge));
         memcpy(&ctxt->response[7], chap->challenge, sizeof(chap->challenge));
         ctxt->response_length = 7 + sizeof(chap->challenge);
         chap->state = CHAP_CHALLENGE;
         break;
     case CHAP_GOT_RESPONSE: // Got response, send client auth status
-        if (chap->user == NULL)
+        if (chap->source == NULL)
         {
             chap_error(ctxt, LOG_WARNING, "<%s> CHAP response without user ID", logprefix);
             return -1;
         }
-        if (crypto_hmac_md5(chap->user->secret, chap->user->secretlen,
-                            chap->challenge, sizeof(chap->challenge),
-                            hash, CRYPTO_MD5_SIZE) != 0)
-        {
-            chap_error(ctxt, 0, NULL);
-            return -1;
-        }
-        if (cresp_len != CRYPTO_MD5_SIZE || memcmp(cresp, hash, CRYPTO_MD5_SIZE) != 0)
+        if (authfile_callback(chap->source, AUTHFILE_HMAC_MD5_RESPONSE, chap->username,
+                              cresp, cresp_len, chap->challenge, sizeof(chap->challenge)) < 0)
         {
             chap_error(ctxt, LOG_WARNING, "<%s> CHAP response doesn't match", logprefix);
             return -1;
@@ -281,23 +269,15 @@ BAD_STATUS:
         ctxt->response_length = 5;
         if (cchal == NULL)
             return 0;
-        u = authuser_find_server(SOCKS_AUTH_CHAP);
-        if (u == NULL)
+        ctxt->response[1]++;
+        ctxt->response[5] = SOCKS_CHAP_ATTR_RESPONSE;
+        ctxt->response[6] = CRYPTO_MD5_SIZE;
+        if (authfile_callback(chap->source, AUTHFILE_HMAC_MD5_SERVER, chap->username,
+                              cchal, cchal_len, &ctxt->response[7], CRYPTO_MD5_SIZE) < 0)
         {
             chap_error(ctxt, LOG_WARNING, "<%s> CHAP client wants auth, but we don't have it", logprefix);
             return -1;
         }
-        if (crypto_hmac_md5(u->secret, u->secretlen,
-                            cchal, cchal_len,
-                            hash, CRYPTO_MD5_SIZE) != 0)
-        {
-            chap_error(ctxt, 0, NULL);
-            return -1;
-        }
-        ctxt->response[1]++;
-        ctxt->response[5] = SOCKS_CHAP_ATTR_RESPONSE;
-        ctxt->response[6] = CRYPTO_MD5_SIZE;
-        memcpy(&ctxt->response[7], hash, CRYPTO_MD5_SIZE);
         ctxt->response_length += 2 + CRYPTO_MD5_SIZE;
         chap->state = CHAP_SERVER_AUTH;
         break;
@@ -308,7 +288,7 @@ BAD_STATUS:
 }
 #else // !HAVE_CRYPTO_HMACMD5
 /**
- * DISABLED AUTH METHOD: CHAP (draft-ietf-aft-socks-chap-01.txt)
+ * CHAP authentication method callback (disabled).
  * @copydetails auth_callback_t
  */
 int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)

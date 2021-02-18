@@ -13,7 +13,6 @@
 #include <string.h>
 #include <getopt.h>
 #include "authfile.h"
-#include "authuser.h"
 #include "acl.h"
 #include "socks5.h"
 #include "logger.h"
@@ -231,7 +230,7 @@ static int process_anonymous(const ini_context_t *ctxt, const ini_option_t *opt,
 {
     (void)ctxt;
     (void)opt;
-    authuser_anon_allow(value2bool(value));
+    authfile_anonymous(value2bool(value) ? 1 : 0);
     return 0;
 }
 

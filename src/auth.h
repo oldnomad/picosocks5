@@ -7,7 +7,7 @@
  * Authentication context
  */
 typedef struct {
-    const char *username;         ///< [OUT] Authenticated user name
+    char       *username;         ///< [OUT] Authenticated user name (malloc'd)
     void       *authdata;         ///< [OUT] Authentication data, if any (malloc'ed)
 
     const unsigned char
@@ -41,4 +41,3 @@ typedef struct {
 } auth_method_t;
 
 const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);
-const auth_method_t *auth_find_method(const char *name);

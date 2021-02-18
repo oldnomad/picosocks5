@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "auth.h"
-#include "authuser.h"
+#include "authfile.h"
 #include "authmethod.h"
 #include "socks5bits.h"
 
@@ -36,28 +36,12 @@ const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t of
 
     for (m = AUTH_METHODS; m->method != SOCKS_AUTH_INVALID; m++)
     {
-        if (!authuser_method_allowed(m->method))
+        if (m->method == SOCKS_AUTH_NONE && !authfile_anonymous(-1))
+            continue;
+        if (m->callback != NULL && m->callback(NULL, -1, NULL) != 0)
             continue;
         if (memchr(offer, m->method, offerlen) != NULL)
             return m;
     }
-    return NULL;
-}
-
-/**
- * Find authentication method by its name
- *
- * @param name name of aithentication method.
- * @return descriptor of authentication method, or NULL if not found.
- */
-const auth_method_t *auth_find_method(const char *name)
-{
-    const auth_method_t *m;
-
-    if (name == NULL || *name == '\0')
-        name = "basic";
-    for (m = AUTH_METHODS; m->method != SOCKS_AUTH_INVALID; m++)
-        if (m->name != NULL && strcmp(name, m->name) == 0)
-            return m;
     return NULL;
 }
