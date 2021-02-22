@@ -92,9 +92,13 @@ static void daemonize(uid_t uid, gid_t gid)
 static void signal_handler(int signo)
 {
     int fd;
+    long maxfd;
 
     EXIT_SIGNO = signo;
-    for (fd = 3; fd < FD_SETSIZE; fd++)
+    maxfd = sysconf(_SC_OPEN_MAX);
+    if (maxfd <= 0)
+        maxfd = FD_SETSIZE;
+    for (fd = 3; fd < maxfd; fd++)
         if (fcntl(fd, F_GETFD) != -1)
             close(fd);
 }
