@@ -27,7 +27,7 @@
 /**
  * Supported secret types.
  */
-enum {
+enum pwd_type {
     PWDTYPE_PLAIN = 0, ///< Plain (unencrypted) password.
     PWDTYPE_CRYPT,     ///> Password hash using crypt(3).
 };
@@ -37,7 +37,7 @@ enum {
  */
 struct auth_user {
     struct auth_user *next;      ///< Pointer to the next element.
-    int               type;      ///< Secret type.
+    enum pwd_type     type;      ///< Secret type.
     const char       *user;      ///< User name, or NULL for server auth.
     const char       *group;     ///< Group name, or NULL.
     const void       *secret;    ///< Secret data.
@@ -67,7 +67,7 @@ void *authpwd_parse(const char *filespec)
     {
         char *sp, *pp, *secp, *grpp;
         size_t ulen, glen, seclen, blen;
-        int type;
+        enum pwd_type type;
         struct auth_user *u;
 
         for (sp = &line[strlen(line)];

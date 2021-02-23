@@ -16,7 +16,7 @@ typedef struct {
 /**
  * Option value type.
  */
-enum {
+enum ini_type {
     INI_TYPE_PLAIN   = 0,
     INI_TYPE_LIST    = 1,
     INI_TYPE_BOOLEAN = 2,
@@ -37,12 +37,11 @@ typedef int (*ini_param_cbk_t)(const ini_context_t *ctxt, const struct ini_optio
  * Option descriptor.
  */
 typedef struct ini_option {
-    const char  *name;     ///< Parameter name, or NULL for end-of-list
-    const char  *optname;  ///< Command line long option name, or NULL
-    char         optchar;  ///< Command line short option character, or 1 for positional parameter, or zero
-    int          type;     ///< Value type
-    ini_param_cbk_t
-                 callback; ///< Parameter callback
+    const char     *name;     ///< Parameter name, or NULL for end-of-list
+    const char     *optname;  ///< Command line long option name, or NULL
+    char            optchar;  ///< Command line short option character, or 1 for positional parameter, or zero
+    enum ini_type   type;     ///< Value type
+    ini_param_cbk_t callback; ///< Parameter callback
 } ini_option_t;
 
 /**
