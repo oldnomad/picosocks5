@@ -71,10 +71,6 @@ AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" 
       ])
 ```
 
-## How to add an authentication method
-
-//To be written...//
-
 ## How to add an authentication source format
 
 Currently PicoSOCKS5 supports only one authorization source format:

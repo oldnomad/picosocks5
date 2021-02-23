@@ -3,9 +3,7 @@ sbin_PROGRAMS = picosocks5
 bin_PROGRAMS = pis5user
 
 picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c crypto.c \
-    socks5.c acl.c \
-    auth.c auth-basic.c auth-chap.c \
-    authfile.c authfile-password.c
+    socks5.c acl.c auth.c authfile.c authfile-password.c
 
 pis5user_SOURCES = pis5-user.c logger.c util.c crypto.c
 
