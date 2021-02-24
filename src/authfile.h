@@ -57,7 +57,7 @@ typedef struct {
 int authfile_anonymous(int flag);
 int authfile_supported(authfile_method_t method);
 void authfile_parse(const char *filespec);
-const void *authfile_find_user(const char *user);
+const void *authfile_find_user(const char *user, authfile_method_t method);
 ssize_t authfile_callback(const void *source, authfile_method_t method, const char *user,
                           const unsigned char *input, size_t inplen,
                           unsigned char *buffer, size_t bufsize);

@@ -104,7 +104,7 @@ MALFORMED:
     user[ulen] = '\0';
     pass = &ctxt->challenge[3 + ulen];
 
-    if ((source = authfile_find_user(user)) != NULL &&
+    if ((source = authfile_find_user(user, AUTHFILE_LOGIN)) != NULL &&
         authfile_callback(source, AUTHFILE_LOGIN, user, pass, plen, NULL, 0) >= 0)
     {
         if (ctxt->authdata != NULL)
@@ -248,7 +248,7 @@ ON_MALFORMED:
 
                 memcpy(uname, dptr, alen);
                 uname[alen] = '\0';
-                handle = authfile_find_user(uname);
+                handle = authfile_find_user(uname, AUTHFILE_HMAC_MD5_RESPONSE);
                 if (handle == NULL)
                 {
                     logger(LOG_WARNING, "<%s> CHAP user ID '%s' not found", logprefix, uname);
