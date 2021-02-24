@@ -21,8 +21,7 @@
 #include "socks5bits.h"
 #include "util.h"
 
-#define MAX_LINE_LENGTH     1024 ///< Maximum line length.
-#define MAX_PASSWORD_LENGTH 256  ///< Maximum password length (guaranteed by SOCKS).
+#define MAX_LINE_LENGTH 1024 ///< Maximum line length.
 
 /**
  * Supported secret types.
@@ -194,7 +193,7 @@ ssize_t authpwd_callback(void *handle, authfile_method_t method, const char *use
                 if (inplen >= MAX_PASSWORD_LENGTH)
                     return -1;
                 {
-                    char pass[256];
+                    char pass[MAX_PASSWORD_LENGTH];
                     struct crypt_data cdata;
                     const char *cpass;
 

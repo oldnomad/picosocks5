@@ -78,7 +78,7 @@ static int auth_method_basic(const char *logprefix, int stage, auth_context_t *c
 {
     const unsigned char *pass;
     size_t ulen, plen;
-    char user[256];
+    char user[MAX_USERNAME_LENGTH];
     const void *source;
     int auth_ok = 0;
 
@@ -177,7 +177,7 @@ static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ct
     struct chap_data {
         enum chap_state   state;
         const void       *source;
-        char              username[256]; // Max.length guaranteed by protocol
+        char              username[MAX_USERNAME_LENGTH];
         unsigned char     challenge[CHAP_CHALLENGE_LENGTH];
     } *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
@@ -243,8 +243,7 @@ ON_MALFORMED:
             break;
         case SOCKS_CHAP_ATTR_USERID:
             {
-                // NOTE: ulen is guaranteed to be at most 255
-                char uname[256];
+                char uname[MAX_USERNAME_LENGTH];
                 const void *handle;
 
                 memcpy(uname, dptr, alen);
