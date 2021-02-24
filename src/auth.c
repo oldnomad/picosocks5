@@ -18,11 +18,6 @@
  *
  * As a sepcial case, when given stage number -1, callback returns success
  * if this authentication method is available.
- *
- * TO ADD A NEW AUTH METHOD:
- *
- * - Declare below a callback function with signature fitting auth_callback_t.
- * - Go to auth.c and insert an element into AUTH_METHODS[] array.
  */
 #include "config.h"
 #define _GNU_SOURCE
@@ -37,29 +32,7 @@
 #include "socks5bits.h"
 #include "crypto.h"
 
-#define CHALLENGE_LENGTH 128 ///< Challenge size in bytes
-
-/**
- * State of CHAP authentication
- */
-enum chap_state {
-    CHAP_ALGO = 0,     ///< Waiting for algorithms
-    CHAP_GOT_ALGO,     ///< Got algorithms, send selected algorithm and challenge
-    CHAP_CHALLENGE,    ///< Sent challenge, waiting for response
-    CHAP_GOT_RESPONSE, ///< Got response, send client auth status
-    CHAP_SERVER_AUTH,  ///< Sent client auth status with server response, waiting for server auth status
-    CHAP_DONE          ///< Authentication finished successfully
-};
-
-/**
- * Internal CHAP authentication state
- */
-struct chap_data {
-    enum chap_state   state;         ///< Current authentication state
-    const void       *source;        ///< Source for user authentication
-    char              username[256]; ///< User name.
-    unsigned char     challenge[CHALLENGE_LENGTH]; ///< Challenge sent to client
-};
+#define CHAP_CHALLENGE_LENGTH 128 ///< CHAP challenge size in bytes
 
 static int auth_method_basic(const char *logprefix, int stage, auth_context_t *ctxt);
 static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt);
@@ -192,7 +165,20 @@ static void chap_error(auth_context_t *ctxt, int prio, const char *msg, ...)
  */
 static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ctxt)
 {
-    struct chap_data *chap;
+    enum chap_state {
+        CHAP_ALGO = 0,     // Waiting for algorithms
+        CHAP_GOT_ALGO,     // Got algorithms, send selected algorithm and challenge
+        CHAP_CHALLENGE,    // Sent challenge, waiting for response
+        CHAP_GOT_RESPONSE, // Got response, send client auth status
+        CHAP_SERVER_AUTH,  // Sent client auth status with server response, waiting for server auth status
+        CHAP_DONE          // Authentication finished successfully
+    };
+    struct chap_data {
+        enum chap_state   state;
+        const void       *source;
+        char              username[256];
+        unsigned char     challenge[CHAP_CHALLENGE_LENGTH];
+    } *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
     size_t dlen, nattr, navas, alen, cresp_len = 0, cchal_len = 0;
     unsigned char attr;
@@ -341,7 +327,7 @@ BAD_STATUS:
             return -1;
         }
         // Length: 2 (prefix) + 3 (algo attr) + 2 (chal attr) + CHALLENGE_LENGTH
-        if (ctxt->response_maxlen < (7 + CHALLENGE_LENGTH))
+        if (ctxt->response_maxlen < (7 + CHAP_CHALLENGE_LENGTH))
         {
             chap_error(ctxt, LOG_WARNING, "<%s> Buffer too small for CHAP", logprefix);
             return -1;
@@ -352,7 +338,7 @@ BAD_STATUS:
         ctxt->response[3] = 1;
         ctxt->response[4] = SOCKS_CHAP_ALGO_HMAC_MD5;
         ctxt->response[5] = SOCKS_CHAP_ATTR_CHALLENGE;
-        ctxt->response[6] = CHALLENGE_LENGTH;
+        ctxt->response[6] = CHAP_CHALLENGE_LENGTH;
         memcpy(&ctxt->response[7], chap->challenge, sizeof(chap->challenge));
         ctxt->response_length = 7 + sizeof(chap->challenge);
         chap->state = CHAP_CHALLENGE;
