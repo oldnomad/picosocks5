@@ -7,18 +7,19 @@
  * Authentication context
  */
 typedef struct {
-    char       *username;         ///< [OUT] Authenticated user name (malloc'd)
-    void       *authdata;         ///< [OUT] Authentication data, if any (malloc'ed)
+    const char *username;         ///< [OUT] Authenticated user name.
+    const char *groupname;        ///< [OUT] Authenticated user group name.
+    void       *authdata;         ///< [OUT] Authentication data, if any (malloc'ed).
 
     const unsigned char
-               *challenge;        ///< [IN] Challenge data
-    size_t      challenge_length; ///< [IN] Challenge length
+               *challenge;        ///< [IN] Challenge data.
+    size_t      challenge_length; ///< [IN] Challenge length.
 
     // NOTE: Challenge and response buffer may overlap!
     unsigned char
-               *response;         ///< [IN/OUT] Response buffer/data
-    size_t      response_maxlen;  ///< [IN] Response buffer size
-    size_t      response_length;  ///< [OUT] Response length
+               *response;         ///< [IN/OUT] Response buffer/data.
+    size_t      response_maxlen;  ///< [IN] Response buffer size.
+    size_t      response_length;  ///< [OUT] Response length.
 } auth_context_t;
 
 /**

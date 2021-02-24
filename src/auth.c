@@ -107,13 +107,14 @@ MALFORMED:
     if ((source = authfile_find_user(user)) != NULL &&
         authfile_callback(source, AUTHFILE_LOGIN, user, pass, plen, NULL, 0) >= 0)
     {
-        if (ctxt->username != NULL)
-            free(ctxt->username);
-        if ((ctxt->username = strdup(user)) == NULL)
+        if (ctxt->authdata != NULL)
+            free(ctxt->authdata);
+        if ((ctxt->authdata = strdup(user)) == NULL)
         {
             logger(LOG_WARNING, "<%s> Not enough memory for username", logprefix);
             return -1;
         }
+        ctxt->username = ctxt->authdata;
         auth_ok = 1;
     }
 
@@ -176,7 +177,7 @@ static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ct
     struct chap_data {
         enum chap_state   state;
         const void       *source;
-        char              username[256];
+        char              username[256]; // Max.length guaranteed by protocol
         unsigned char     challenge[CHAP_CHALLENGE_LENGTH];
     } *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
@@ -367,6 +368,7 @@ BAD_STATUS:
         ctxt->response[3] = 1;
         ctxt->response[4] = 0;
         ctxt->response_length = 5;
+        ctxt->username = chap->username;
         if (cchal == NULL)
             return 0;
         ctxt->response[1]++;

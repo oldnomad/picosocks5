@@ -32,7 +32,8 @@
 typedef struct {
     int socket;                     ///< Client socket
 
-    char *username;                 ///< Authenticated user (if any)
+    const char *username;           ///< Authenticated user (if any)
+    const char *groupname;          ///< Group name for authenticated user (if any).
     void *authdata;                 ///< Additional malloc'ed data (if any)
 
     struct sockaddr_storage local;  ///< Local address and port
@@ -266,8 +267,9 @@ static int socks_negotiate_method(socks_state_t *conn)
 
     // Now let's begin authentication sub-negotiation
     socks_logger_prefix(conn, "AUTH");
-    ctxt.username = NULL;
-    ctxt.authdata = NULL;
+    ctxt.username  = NULL;
+    ctxt.groupname = NULL;
+    ctxt.authdata  = NULL;
     for (stage = 0;; stage++)
     {
         if ((len = socks_read(conn, conn->buffer, sizeof(conn->buffer))) < 0)
@@ -290,10 +292,11 @@ static int socks_negotiate_method(socks_state_t *conn)
         }
     }
     if (ctxt.username != NULL)
-        logger(LOG_DEBUG, "<%s> Authenticated as user '%s'", conn->logprefix,
-            ctxt.username);
-    conn->username = ctxt.username;
-    conn->authdata = ctxt.authdata;
+        logger(LOG_DEBUG, "<%s> Authenticated as user '%s', group '%s'", conn->logprefix,
+            ctxt.username, ctxt.groupname);
+    conn->username  = ctxt.username;
+    conn->groupname = ctxt.groupname;
+    conn->authdata  = ctxt.authdata;
     return 0;
 }
 
@@ -769,6 +772,7 @@ static void *socks_connection_thread(void *arg)
     socks_state_t conn = {
         .socket    = (int)(intptr_t)arg,
         .username  = NULL,
+        .groupname = NULL,
         .authdata  = NULL,
         .local     = { .ss_family = AF_UNSPEC },
         .client    = { .ss_family = AF_UNSPEC },
@@ -801,8 +805,6 @@ ON_ERROR:
     close(conn.socket);
     if (conn.authdata != NULL)
         free(conn.authdata);
-    if (conn.username != NULL)
-        free(conn.username);
     socks_client_conn_dec();
     return NULL;
 }
