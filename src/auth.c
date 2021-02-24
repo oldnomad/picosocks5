@@ -78,7 +78,7 @@ static int auth_method_basic(const char *logprefix, int stage, auth_context_t *c
 {
     const unsigned char *pass;
     size_t ulen, plen;
-    char user[MAX_USERNAME_LENGTH];
+    char user[MAX_USERNAME_LENGTH], group[MAX_GROUPNAME_LENGTH];
     const void *source;
     int auth_ok = 0;
 
@@ -103,18 +103,34 @@ MALFORMED:
     memcpy(user, &ctxt->challenge[2], ulen);
     user[ulen] = '\0';
     pass = &ctxt->challenge[3 + ulen];
+    group[0] = '\0';
 
-    if ((source = authfile_find_user(user, AUTHFILE_LOGIN)) != NULL &&
+    if ((source = authfile_find_user(user, AUTHFILE_LOGIN, group, sizeof(group))) != NULL &&
         authfile_callback(source, AUTHFILE_LOGIN, user, pass, plen, NULL, 0) >= 0)
     {
+        size_t glen = strlen(group);
+        char *data;
+
         if (ctxt->authdata != NULL)
             free(ctxt->authdata);
-        if ((ctxt->authdata = strdup(user)) == NULL)
+        if (glen != 0)
+            ++glen;
+        if ((data = malloc(ulen + 1 + glen)) == NULL)
         {
-            logger(LOG_WARNING, "<%s> Not enough memory for username", logprefix);
+            logger(LOG_WARNING, "<%s> Not enough memory for username/groupname", logprefix);
             return -1;
         }
-        ctxt->username = ctxt->authdata;
+        ctxt->authdata = data;
+        ctxt->username = data;
+        memcpy(data, user, ulen + 1);
+        if (glen != 0)
+        {
+            data += ulen + 1;
+            ctxt->groupname = data;
+            memcpy(data, group, glen);
+        }
+        else
+            ctxt->groupname = NULL;
         auth_ok = 1;
     }
 
@@ -175,10 +191,11 @@ static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ct
         CHAP_DONE          // Authentication finished successfully
     };
     struct chap_data {
-        enum chap_state   state;
-        const void       *source;
-        char              username[MAX_USERNAME_LENGTH];
-        unsigned char     challenge[CHAP_CHALLENGE_LENGTH];
+        enum chap_state state;
+        const void     *source;
+        char            username[MAX_USERNAME_LENGTH];
+        char            groupname[MAX_GROUPNAME_LENGTH];
+        unsigned char   challenge[CHAP_CHALLENGE_LENGTH];
     } *chap;
     const unsigned char *dptr, *cresp = NULL, *cchal = NULL;
     size_t dlen, nattr, navas, alen, cresp_len = 0, cchal_len = 0;
@@ -193,9 +210,10 @@ static int auth_method_chap(const char *logprefix, int stage, auth_context_t *ct
             logger(LOG_ERR, "<%s> Not enough memory for CHAP", logprefix);
             return -1;
         }
-        chap->state       = CHAP_ALGO;
-        chap->source      = NULL;
-        chap->username[0] = '\0';
+        chap->state        = CHAP_ALGO;
+        chap->source       = NULL;
+        chap->username[0]  = '\0';
+        chap->groupname[0] = '\0';
         ctxt->authdata = chap;
     }
     else
@@ -248,7 +266,8 @@ ON_MALFORMED:
 
                 memcpy(uname, dptr, alen);
                 uname[alen] = '\0';
-                handle = authfile_find_user(uname, AUTHFILE_HMAC_MD5_RESPONSE);
+                handle = authfile_find_user(uname, AUTHFILE_HMAC_MD5_RESPONSE,
+                    chap->groupname, sizeof(chap->groupname));
                 if (handle == NULL)
                 {
                     logger(LOG_WARNING, "<%s> CHAP user ID '%s' not found", logprefix, uname);
@@ -367,7 +386,8 @@ BAD_STATUS:
         ctxt->response[3] = 1;
         ctxt->response[4] = 0;
         ctxt->response_length = 5;
-        ctxt->username = chap->username;
+        ctxt->username  = chap->username;
+        ctxt->groupname = chap->groupname[0] != '\0' ? chap->groupname : NULL;
         if (cchal == NULL)
             return 0;
         ctxt->response[1]++;

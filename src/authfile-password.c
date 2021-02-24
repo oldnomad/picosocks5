@@ -173,7 +173,22 @@ ssize_t authpwd_callback(void *handle, authfile_method_t method, const char *use
             return 0;
         for (u = list; u != NULL; u = u->next)
             if (u->user != NULL && strcmp(u->user, user) == 0)
+            {
+                if (buffer != NULL && bufsize > 0)
+                {
+                    if (u->group != NULL && bufsize > 1)
+                    {
+                        size_t glen = strlen(u->group);
+                        if (glen >= bufsize)
+                            glen = bufsize - 1;
+                        memcpy(buffer, u->group, glen);
+                        buffer[glen] = '\0';
+                    }
+                    else
+                        buffer[0] = '\0';
+                }
                 return 0;
+            }
         return -1;
     case AUTHFILE_LOGIN:
         if (user == NULL)

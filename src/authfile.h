@@ -15,7 +15,7 @@
  * Authentication callback methods that may be used.
  */
 typedef enum {
-    AUTHFILE_CHECK = 0,          ///< User check: no input, no output.
+    AUTHFILE_CHECK = 0,          ///< User check: no input, output group name (NUL-terminated).
     AUTHFILE_LOGIN,              ///< Plain login: input password, no output.
     AUTHFILE_HMAC_MD5_CHALLENGE, ///< HMAC-MD5 challenge: no input, output challenge.
     AUTHFILE_HMAC_MD5_RESPONSE,  ///< HMAC-MD5 check response: input client response, buffer contains challenge, no output.
@@ -57,7 +57,8 @@ typedef struct {
 int authfile_anonymous(int flag);
 int authfile_supported(authfile_method_t method);
 void authfile_parse(const char *filespec);
-const void *authfile_find_user(const char *user, authfile_method_t method);
+const void *authfile_find_user(const char *user, authfile_method_t method,
+                               char *group, size_t groupsize);
 ssize_t authfile_callback(const void *source, authfile_method_t method, const char *user,
                           const unsigned char *input, size_t inplen,
                           unsigned char *buffer, size_t bufsize);

@@ -105,19 +105,23 @@ void authfile_parse(const char *filespec)
 /**
  * Find authentication source for user, supporting specified method.
  *
- * @param user   user name.
- * @param method method to support.
+ * @param user       user name.
+ * @param method    method to support.
+ * @param group     optional buffer for NUL-terminated group name, or NULL.
+ * @param groupsize size of group name buffer.
  * @return opaque authentication source, or NULL if not found.
  */
-const void *authfile_find_user(const char *user, authfile_method_t method)
+const void *authfile_find_user(const char *user, authfile_method_t method,
+                               char *group, size_t groupsize)
 {
     const struct authfile_container *c;
 
     if (user == NULL)
         return NULL;
     for (c = AUTHFILE_SOURCES[0]; c != NULL; c = c->next)
-        if (c->format->callback(c->handle, AUTHFILE_CHECK, user, NULL, 0, NULL, 0) == 0 &&
-            (method == AUTHFILE_CHECK || c->format->callback(c->handle, method, NULL, NULL, 0, NULL, 0) == 0))
+        if (c->format->callback(c->handle, AUTHFILE_CHECK, user, NULL, 0, (void *)group, groupsize) >= 0 &&
+            (method == AUTHFILE_CHECK ||
+             c->format->callback(c->handle, method, NULL, NULL, 0, NULL, 0) == 0))
             return c;
     return NULL;
 }

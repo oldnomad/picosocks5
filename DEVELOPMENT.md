@@ -134,8 +134,10 @@ Following methods are defined:
 
   - `AUTHFILE_CHECK`: Check whether specified user can be
     authenticated by this source (exists). The callback returns
-    zero if user exists, or `-1` otherwise. Input data and
-    output buffer are ignored.
+    zero if user exists, or `-1` otherwise. Input data are
+    ignored. If output buffer is specified, callback may
+    fill it with NUL-terminated group name. Insufficient
+    output buffer shall not result in an error.
   - `AUTHFILE_LOGIN`: Plaintext login, input data contains
     plaintext password (not NUL-terminated). The password
     is guaranteed to be at most 255 bytes long. The callback
