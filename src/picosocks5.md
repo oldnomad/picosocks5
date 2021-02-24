@@ -234,30 +234,36 @@ containing colon-separated fields. No empty lines or comments are allowed.
 Each line must contain 3 fields containing:
 
   * User name, or an empty field for server-side secret.
-  * Authentication method. Currently methods `basic` and `chap` are supported.
-    Empty field is interpreted as `basic`.
-  * Method-dependent secret.
+  * Group name. Currently group names are ignored.
+  * Secret in one of supported formats.
 
 As an exception, lines in old (0.2) format with only 2 fields are accepted.
-In this case, the second field contains the secret, and the method is always
-`"basic"`. A warning will be issued for each line in old format.
+In this case, the second field contains the secret, and the group name is
+always empty. A warning will be issued for each line in old format.
 
-Note that if you want a user to be able to be authenticated by any method,
-you'll have to include separate lines for each authentication method.
+Supported secret formats are Base64-encoded plain password (with prefix
+`"$base64$"`), or **crypt(3)**-compatible hash value. All versions of
+_glibc_ support MD5-crypt (prefix `"$1$"`), as produced, for example,
+by command **openssl passwd -1**. Recent versions of _glibc_ also support
+SHA-256 (prefix `"$5$"`) and SHA-512 (prefix `"$6$"`). Some distributions
+include an extension supporting Blowfish (prefix `"$2a$"`).
+
+If several secrets are provided for the same user name, authentication will
+use the first secret in format acceptable for the authentication method
+(see below). For example, if the password file contains for a user both a
+**crypt(3)**-compatible hash and a plain Base64-encoded password (in that
+order), basic authentication method will use **crypt(3)**-compatible hash
+(because it comes first), but CHAP authentication method will use plain
+password.
 
 ### Basic authentication method
 
-For authentication method `"basic"`, the secret is a password hash in
-a salted format supported by **crypt**(3) function. All versions of _glibc_
-support MD5-crypt (prefix `"$1$"`), as produced, for example, by command
-**openssl passwd -1**. Recent versions of _glibc_ also support SHA-256
-(prefix `"$5$"`) and SHA-512 (prefix `"$6$"`). Some distributions include
-an extension supporting Blowfish (prefix `"$2a$"`).
+Basic authentication method can use both **crypt(3)**-compatible hash,
+or plain password, whichever comes first.
 
 ### CHAP authentication method
 
-For authentication method `"chap"`, the secret is base64-encoded and
-prefixed with text `"$base64$"`.
+CHAP authentication method can use only plain password.
 
 # SEE ALSO
 

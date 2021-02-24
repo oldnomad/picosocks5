@@ -29,7 +29,7 @@
  */
 enum pwd_type {
     PWDTYPE_PLAIN = 0, ///< Plain (unencrypted) password.
-    PWDTYPE_CRYPT,     ///> Password hash using crypt(3).
+    PWDTYPE_CRYPT,     ///< Password hash using crypt(3).
 };
 
 /**
