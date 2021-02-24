@@ -142,7 +142,7 @@ Listen port can be a decimal number of a service name (see **services**(5)).
 Option **--nofork** instructs the daemon to stay in foreground, but it also
 has several side-effects:
 
-  * Singals `SIGHUP` and `SIGPIPE` are not ignored.
+  * Signals `SIGHUP` and `SIGPIPE` are not ignored.
   * Privileges are not dropped, even if **--user** and **--group**
     are specified.
   * If **--logmode** is not specified, default log mode is not `"syslog"`,

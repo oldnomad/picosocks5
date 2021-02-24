@@ -3,8 +3,8 @@
  * Definitions for authentication methods.
  */
 
-#define MAX_USERNAME_LENGTH 256 // Maximum user name length, guaranteed by protocol
-#define MAX_PASSWORD_LENGTH 256 // Maximum plaintext password length, guaranteed by protocol
+#define MAX_USERNAME_LENGTH 256 ///< Maximum user name length, guaranteed by protocol.
+#define MAX_PASSWORD_LENGTH 256 ///< Maximum plaintext password length, guaranteed by protocol.
 
 /**
  * Authentication context

@@ -6,7 +6,7 @@ It is written in pure C and by default uses no extra libraries besides GLibc.
 
 # License
 
-PicoSOCKS5 is licensed under GNU Generat Public License Version 3 (GPLv3).
+PicoSOCKS5 is licensed under GNU General Public License Version 3 (GPLv3).
 For full text of the license see file [LICENSE.txt](LICENSE.txt) in the
 root of the project.
 

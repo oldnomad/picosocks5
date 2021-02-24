@@ -11,7 +11,7 @@ To compile PicoSOCKS5 with a new crypto library you have to perform two tasks:
 
 First, you have to decide three parameters:
 
-  - Choose a unique name ("module name") by which the crypro library will
+  - Choose a unique name ("module name") by which the crypto library will
     be known in th configuration script. Lower case and no spaces is the
     preferred format. Names "yes", "no", "emul", "gnutls", and "openssl"
     must not be used.
@@ -133,7 +133,7 @@ zero if the method is supported, or `-1` otherwise.
 Following methods are defined:
 
   - `AUTHFILE_CHECK`: Check whether specified user can be
-    authenticated by this surce (exists). The allback returns
+    authenticated by this source (exists). The callback returns
     zero if user exists, or `-1` otherwise. Input data and
     output buffer are ignored.
   - `AUTHFILE_LOGIN`: Plaintext login, input data contains
