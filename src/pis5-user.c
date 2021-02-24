@@ -24,10 +24,11 @@
 #define DEFAULT_SALT_SIZE   8     ///< Number of salt characters to generate for crypt(3)
 #define DEFAULT_SALT_PREFIX "$6$" ///< Default crypt(3) method
 
-static const char SHORT_OPTS[] = "m:h"; ///< Command-line short options.
+static const char SHORT_OPTS[] = "m:lh"; ///< Command-line short options.
 /// Command-line long options.
 static const struct option LONG_OPTS[] = {
     { "method",      1, NULL, 'm'  },
+    { "list",        0, NULL, 'l'  },
     { "help",        0, NULL, 'h'  },
     { NULL }
 };
@@ -49,13 +50,14 @@ static ssize_t encode_base64(const char *password, char *buffer, size_t bufsize)
 struct pwd_encoding {
     const char  *name;   ///< Encoding method name.
     pwd_encode_t encode; ///< Encoding function.
+    const char  *descr;  ///< Human-readable method description.
 };
 
 /// List of supported encoding methods.
 static const struct pwd_encoding METHODS[] = {
-    { "basic", encode_crypt  },
-    { "chap",  encode_base64 },
-    { NULL,    NULL          }
+    { "basic", encode_crypt,  "crypt(3)-compatible hash"          },
+    { "chap",  encode_base64, "Base64-encoded plaintext password" },
+    { NULL }
 };
 
 /**
@@ -70,10 +72,11 @@ static void usage(const char *bin_name)
     printf("Usage: %s [<option>...] <user-name>\n\n"
            "Options:\n\n"
            "    -m <method-list>, --method <method-list>\n"
-           "        Generate secrets only for specified methods. The option\n"
-           "        accepts a comma-separated list of methods. Currently supported\n"
-           "        methods are \"basic\" and \"chap\". Default is to use all known\n"
-           "        methods.\n\n"
+           "        Generate encoded secrets only for specified encoding methods.\n"
+           "        The option accepts a comma-separated list of methods.\n"
+           "        Default is to use all known methods.\n\n"
+           "    -l, --list\n"
+           "        List all supported secret encoding methods and exit.\n\n"
            "    -h, --help\n"
            "        Print usage message and exit.\n",
            bin_name);
@@ -283,6 +286,10 @@ int main(int argc, char **argv)
                 }
             }
             break;
+        case 'l': // --list
+            for (enc = METHODS; enc->name != NULL; enc++)
+                printf("%-8s\t%s\n", enc->name, enc->descr);
+            return 0;
         case 'h': // --help
             usage(argv[0]);
             break;
