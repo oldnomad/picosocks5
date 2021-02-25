@@ -63,6 +63,10 @@ static struct acl_set ACL_GLOBAL = {
  * List of named ACL sets.
  */
 static struct acl_set *ACL_NAMED_LIST[2] = { NULL, NULL };
+/**
+ * ACL set name for anonymous and groupless users.
+ */
+const char ACL_ANON_GROUP[] = "*";
 
 /**
  * Known names for request types.
@@ -308,10 +312,7 @@ int acl_check_client_address(const char *group, const struct sockaddr *addr, siz
     char netaddr[UTIL_ADDRSTRLEN + 8];
 
     if ((set = find_acl_group(group)) == NULL)
-    {
-        logger(LOG_ERR, "Unknown ACL group '%s'", group);
-        return -1;
-    }
+        set = &ACL_GLOBAL;
     if (check_client_address(set, addr, &net))
         return 1;
     util_decode_addr(addr, addrlen, hostaddr, sizeof(hostaddr));
@@ -418,10 +419,7 @@ int acl_check_request(const char *group, unsigned char type, const struct sockad
     char netaddr[UTIL_ADDRSTRLEN + 8];
 
     if ((set = find_acl_group(group)) == NULL)
-    {
-        logger(LOG_ERR, "Unknown ACL group '%s'", group);
-        return -1;
-    }
+        set = &ACL_GLOBAL;
     if (check_request(set, type, addr, &req))
         return 1;
     util_decode_addr(addr, addrlen, hostaddr, sizeof(hostaddr));

@@ -187,8 +187,6 @@ by `"="` character. Whitespace around the separator is ignored.
 There is no quoting or escaping for parameter values, parameter names,
 or section names.
 
-Currently `picosocks5` doesn't support any configuration sections.
-
 For most configuration parameters, parameter name is the same as
 corresponding command line option, without the `"--"` prefix.
 Exceptions are:
@@ -207,6 +205,38 @@ Parameter values correspond to values specified for options. Values for
 boolean options (**--anonymous** and **--nofork**) are interpreted as
 boolean values, with `"yes"`, `"true"`, and `"1"` interpreted as a true
 value, and any other value as a false value.
+
+## ACL sections
+
+Configuration file may contain named sections. These sections specify
+ACL sets for corresponding groups of users. That is, a section heading
+`[name]` starts a section with parameters for users in group `"name"`.
+
+Section headers may repeat. All parameters between this section header
+and the next section header (or end of file) belong to this section.
+
+ACL set section may include following parameters:
+
+  * Configuration parameter **request**, containing rules allowing
+    and disallowing specific types of requests. See command line
+    option **-request** for explanation.
+  * Configuration parameter **network**, containing rules allowing
+    and disallowing IPv4 or IPv6 networks. See command line option
+    **-network** for explanation.
+  * Configuration parameter **base**, specifying name of parent
+    ACL set section. Rules from the parent section will be checked
+    after rules specified in this section. If parent section is
+    not specified, root section is used.
+
+Note that rules in ACL set section are checked only after SOCKS
+authentication. That means that an incoming connection from an
+address forbidden in an ACL set will be accepted, authenticated,
+and only after that dropped.
+
+Special ACL set section with header `[*]`, if specified, will be
+used for anonymous users and for users without a group. It will
+not, however, be applied to users with a group for which no ACL
+set section was specified.
 
 # AUTHENTICATION FILES
 
@@ -234,7 +264,7 @@ containing colon-separated fields. No empty lines or comments are allowed.
 Each line must contain 3 fields containing:
 
   * User name, or an empty field for server-side secret.
-  * Group name. Currently group names are ignored.
+  * Group name, or an empty field for no group.
   * Secret in one of supported formats.
 
 As an exception, lines in old (0.2) format with only 2 fields are accepted.

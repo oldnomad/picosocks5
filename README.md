@@ -35,10 +35,8 @@ to be incompatible with GPL.
 
 # Known disadvantages
 
-- There's no access control (any client that can access the proxy can
-  connect to any accessible server).
-- User list for authentication is kept in memory, so PicoSOCKS5 doesn't
-  work well for really large number of users.
+- User list for authentication (in the default password format) is kept
+  in memory, so PicoSOCKS5 doesn't work well for really large number of users.
 - There's currently no support for GSS-API authentication method
   ([RFC 1961](https://www.ietf.org/rfc/rfc1961.txt)), required for full
   SOCKS5 compliance.

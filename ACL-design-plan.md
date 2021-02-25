@@ -27,7 +27,7 @@ This is a design plan for ACLs in picosocks5.
   - [x] Allow named sections ("group parameters") containing:
     - [x] Parameters `network` and `request`.
     - [x] Parameter `base`, referring to other named sections.
-  - [ ] Allow a reserved named section to specify group parameters for
+  - [x] Allow a reserved named section to specify group parameters for
         anonymous users and users without a group.
   - [x] Format of password files is extended to allow specifying
         group name in the second field.

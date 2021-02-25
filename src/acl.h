@@ -2,6 +2,7 @@
  * @file
  * Definitions for ACL functions.
  */
+extern const char ACL_ANON_GROUP[];
 
 struct sockaddr;
 int acl_check_client_address(const char *group, const struct sockaddr *addr, size_t addrlen);

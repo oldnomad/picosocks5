@@ -19,7 +19,7 @@
     - [x] Limit on number of concurrent connections.
     - [x] Timeout for idle connections.
   - [x] Configuration file.
-  - [ ] ACL.
+  - [x] ACL.
     - [x] Limit incoming addresses.
     - [x] Limit request types.
     - [x] Limit operations for specific users.

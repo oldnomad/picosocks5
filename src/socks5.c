@@ -263,7 +263,11 @@ static int socks_negotiate_method(socks_state_t *conn)
     logger(LOG_DEBUG, "<%s> Negotiated authentication method 0x%02X", conn->logprefix,
         (unsigned)method->method);
     if (method->callback == NULL)
+    {
+        conn->username = NULL;
+        conn->groupname = ACL_ANON_GROUP;
         return 0;
+    }
 
     // Now let's begin authentication sub-negotiation
     socks_logger_prefix(conn, "AUTH");
@@ -295,7 +299,7 @@ static int socks_negotiate_method(socks_state_t *conn)
         logger(LOG_DEBUG, "<%s> Authenticated as user '%s', group '%s'", conn->logprefix,
             ctxt.username, ctxt.groupname);
     conn->username  = ctxt.username;
-    conn->groupname = ctxt.groupname;
+    conn->groupname = ctxt.groupname != NULL ? ctxt.groupname : ACL_ANON_GROUP;
     conn->authdata  = ctxt.authdata;
     return 0;
 }
@@ -720,8 +724,7 @@ static int socks_process_request(socks_state_t *conn)
         break;
     }
     conn->server = dst;
-    // TODO: Check group
-    if (!acl_check_request(NULL, conn->buffer[1], (const struct sockaddr *)&dst, sizeof(dst)))
+    if (!acl_check_request(conn->groupname, conn->buffer[1], (const struct sockaddr *)&dst, sizeof(dst)))
     {
         logger(LOG_NOTICE, "<%s> Command 0x%02X denied by ACL", conn->logprefix,
             conn->buffer[1]);
@@ -800,7 +803,8 @@ ON_ERROR:
 
     socks_set_options(&conn, conn.socket);
     socks_client_conn_inc();
-    if (socks_negotiate_method(&conn) == 0)
+    if (socks_negotiate_method(&conn) == 0 &&
+        acl_check_client_address(conn.groupname, (const struct sockaddr *)&conn.client, sizeof(conn.client)))
         socks_process_request(&conn);
     close(conn.socket);
     if (conn.authdata != NULL)

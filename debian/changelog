@@ -1,6 +1,7 @@
 picosocks5 (0.12) UNRELEASED; urgency=medium
 
   * Configuration file now allows named sections for group ACL sets.
+  * ACL: Full support for ACL sets.
 
  -- Alec Kojaev <alec.kojaev@gmail.com>  Thu, 25 Feb 2021 21:09:49 +0300
 
