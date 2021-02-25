@@ -41,7 +41,8 @@ struct acl_request {
  * Structure for named ACL set.
  */
 struct acl_set {
-    const char *name;             ///< ACL set name
+    struct acl_set       *next;   ///< Pointer to next entry (in a list)
+    const char           *name;   ///< ACL set name
     const struct acl_set *base;   ///< ACL set parent set
 
     struct acl_network *client_networks[2]; ///< List of networks
@@ -52,11 +53,16 @@ struct acl_set {
  * Global (root) ACL set.
  */
 static struct acl_set ACL_GLOBAL = {
-    .name = "*",
+    .next = NULL,
+    .name = "",
     .base = NULL,
     .client_networks = { NULL, NULL },
     .client_requests = { NULL, NULL },
 };
+/**
+ * List of named ACL sets.
+ */
+static struct acl_set *ACL_NAMED_LIST[2] = { NULL, NULL };
 
 /**
  * Known names for request types.
@@ -242,11 +248,49 @@ static int normalize_network(const char *address, unsigned *pbits,
  * @param group ACL set name.
  * @return ACL set, or NULL if not found.
  */
-static struct acl_set *find_acl_group(const char *group) {
+static const struct acl_set *find_acl_group(const char *group) {
+    const struct acl_set *set;
+
     if (group == NULL)
         return &ACL_GLOBAL;
-    // TODO: Find group by name
+    for (set = ACL_NAMED_LIST[0]; set != NULL; set = set->next)
+        if (set->name != NULL && strcmp(set->name, group) == 0)
+            return set;
     return NULL;
+}
+
+/**
+ * Find group by name, or create a new one.
+ *
+ * @param group ACL set name.
+ * @return ACL set, or NULL on error.
+ */
+static struct acl_set *modify_acl_group(const char *group) {
+    struct acl_set *set;
+    size_t nlen;
+
+    if (group == NULL)
+        return &ACL_GLOBAL;
+    for (set = ACL_NAMED_LIST[0]; set != NULL; set = set->next)
+        if (set->name != NULL && strcmp(set->name, group) == 0)
+            return set;
+    nlen = strlen(group) + 1;
+    if ((set = malloc(sizeof(*set) + nlen)) == NULL)
+        return NULL;
+    set->next = NULL;
+    set->name = (char *)&set[1];
+    memcpy(&set[1], group, nlen);
+    set->base = NULL;
+    set->client_networks[0] = NULL;
+    set->client_networks[1] = NULL;
+    set->client_requests[0] = NULL;
+    set->client_requests[1] = NULL;
+    if (ACL_NAMED_LIST[1] == NULL)
+        ACL_NAMED_LIST[0] = set;
+    else
+        ACL_NAMED_LIST[1]->next = set;
+    ACL_NAMED_LIST[1] = set;
+    return set;
 }
 
 /**
@@ -298,10 +342,9 @@ int acl_add_client_network(const char *group, int allow, const char *address, un
     struct acl_network *net;
     struct sockaddr_storage addr = { .ss_family = AF_UNSPEC };
 
-    (void)group;
-    if ((set = find_acl_group(group)) == NULL)
+    if ((set = modify_acl_group(group)) == NULL)
     {
-        logger(LOG_ERR, "Unknown ACL group '%s'", group);
+        logger(LOG_ERR, "Not enough memory for ACL group '%s'", group);
         return -1;
     }
     if (normalize_network(address, &bits, &addr) != 0)
@@ -410,10 +453,9 @@ int acl_add_request_rule(const char *group, int allow, int type, const char *add
     struct acl_request *req;
     struct sockaddr_storage addr = { .ss_family = AF_UNSPEC };
 
-    (void)group;
-    if ((set = find_acl_group(group)) == NULL)
+    if ((set = modify_acl_group(group)) == NULL)
     {
-        logger(LOG_ERR, "Unknown ACL group '%s'", group);
+        logger(LOG_ERR, "Not enough memory for ACL group '%s'", group);
         return -1;
     }
     if (normalize_network(address, &bits, &addr) != 0)
@@ -433,6 +475,45 @@ int acl_add_request_rule(const char *group, int allow, int type, const char *add
     else
         set->client_requests[1]->next = req;
     set->client_requests[1] = req;
+    return 0;
+}
+
+/**
+ * Set parent ACL set to specified ACL set.
+ *
+ * Parent ACL should be already defined.
+ *
+ * @param group  ACL set name.
+ * @param parent parent ACL set name.
+ * @return zero on success, or -1 on error.
+ */
+int acl_set_parent(const char *group, const char *parent)
+{
+    const struct acl_set *pset, *s;
+    struct acl_set *set;
+
+    if (group == NULL || parent == NULL)
+    {
+        logger(LOG_ERR, "Invalud ACL group name");
+        return -1;
+    }
+    if ((pset = find_acl_group(parent)) == NULL)
+    {
+        logger(LOG_ERR, "Unknown parent ACL[%s]", parent);
+        return -1;
+    }
+    if ((set = modify_acl_group(group)) == NULL)
+    {
+        logger(LOG_ERR, "Not enough memory for ACL group '%s'", group);
+        return -1;
+    }
+    for (s = pset; s != NULL; s = s->base)
+        if (s == set)
+        {
+            logger(LOG_ERR, "Loop detected: ACL[%s] <-> ACL[%s]", group, parent);
+            return -1;
+        }
+    set->base = pset;
     return 0;
 }
 
@@ -471,5 +552,9 @@ static void show_acl_set(const struct acl_set *set)
  */
 void acl_show_config(void)
 {
+    const struct acl_set *set;
+
     show_acl_set(&ACL_GLOBAL);
+    for (set = ACL_NAMED_LIST[0]; set != NULL; set = set->next)
+        show_acl_set(set);
 }

@@ -38,6 +38,7 @@ static int process_listen   (const ini_context_t *ctxt, const ini_option_t *opt,
 static int process_bind     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_maxconn  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_timeout  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
+static int process_setbase  (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_networks (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_requests (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
 static int process_user     (const ini_context_t *ctxt, const ini_option_t *opt, const char *value);
@@ -66,6 +67,15 @@ static const ini_option_t COMMON_SECTION[] = {
     { "group",     "group",     'g', INI_TYPE_PLAIN,   process_group     },
     { "=",         "help",      'h', INI_TYPE_BOOLEAN, process_help      },
     { "=",         "version",   'V', INI_TYPE_BOOLEAN, process_version   },
+    { NULL }
+};
+/**
+ * Options list for named sections.
+ */
+static const ini_option_t NAMED_SECTION[] = {
+    { "base",      NULL,          0, INI_TYPE_PLAIN,   process_setbase   },
+    { "network",   NULL,          0, INI_TYPE_LIST,    process_networks  },
+    { "request",   NULL,          0, INI_TYPE_LIST,    process_requests  },
     { NULL }
 };
 
@@ -154,7 +164,7 @@ static const char ARG_DESC[] =
 static const ini_option_t *section_callback(const ini_context_t *ctxt)
 {
     if (ctxt->section != NULL)
-        return NULL;
+        return NAMED_SECTION;
     return COMMON_SECTION;
 }
 
@@ -345,6 +355,18 @@ static int process_timeout(const ini_context_t *ctxt, const ini_option_t *opt, c
     sec = (time_t)v;
     usec = (suseconds_t)(1000.0*(v - sec));
     socks_set_timeout(sec, usec);
+    return 0;
+}
+
+static int process_setbase(const ini_context_t *ctxt, const ini_option_t *opt, const char *value)
+{
+    (void)ctxt;
+    (void)opt;
+    if (acl_set_parent(ctxt->section, value) != 0)
+    {
+        ini_error(ctxt, "failed to set parent ACL '%s'", value);
+        return -1;
+    }
     return 0;
 }
 

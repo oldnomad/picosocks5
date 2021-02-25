@@ -22,4 +22,4 @@
   - [ ] ACL.
     - [x] Limit incoming addresses.
     - [x] Limit request types.
-    - [ ] Limit operations for specific users.
+    - [x] Limit operations for specific users.

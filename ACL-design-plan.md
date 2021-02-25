@@ -24,12 +24,12 @@ This is a design plan for ACLs in picosocks5.
         Each pattern consists of request type prefix (`connect`, `bind`,
         `assoc`, or `all` for all types), a colon (`:`), and a network.
         If omitted, `all:*` (all types,  all destinations) is used.
-  - [ ] Allow named sections ("group parameters") containing:
-    - [ ] Parameters `network` and `request`.
-    - [ ] Parameter `base`, referring to other named sections.
+  - [x] Allow named sections ("group parameters") containing:
+    - [x] Parameters `network` and `request`.
+    - [x] Parameter `base`, referring to other named sections.
   - [ ] Allow a reserved named section to specify group parameters for
         anonymous users and users without a group.
-  - [ ] Format of password files is extended to allow specifying
+  - [x] Format of password files is extended to allow specifying
         group name in the second field.
 
 Thus, there's a tree of group parameter sets, with each node
