@@ -280,7 +280,7 @@ static struct acl_set *modify_acl_group(const char *group) {
     set->next = NULL;
     set->name = (char *)&set[1];
     memcpy(&set[1], group, nlen);
-    set->base = NULL;
+    set->base = &ACL_GLOBAL;
     set->client_networks[0] = NULL;
     set->client_networks[1] = NULL;
     set->client_requests[0] = NULL;
