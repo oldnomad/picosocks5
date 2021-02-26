@@ -247,7 +247,8 @@ static int socks_negotiate_method(socks_state_t *conn)
     if (len < 3 || conn->buffer[0] != SOCKS_VERSION5 ||
         conn->buffer[1] == 0 || (conn->buffer[1] + 2) > len)
     {
-        logger(LOG_WARNING, "<%s> Malformed initial offer", conn->logprefix);
+        logger(LOG_WARNING, "<%s> Malformed initial offer: [%zd] %02X %02X...",
+               conn->logprefix, len, conn->buffer[0], conn->buffer[1]);
         return -1;
     }
     method = auth_negotiate_method(&conn->buffer[2], conn->buffer[1]);
