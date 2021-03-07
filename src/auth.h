@@ -45,4 +45,4 @@ typedef struct {
     auth_callback_t callback;     ///< Method stage callback
 } auth_method_t;
 
-const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen);
+const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen, int allow_anon);

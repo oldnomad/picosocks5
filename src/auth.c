@@ -50,17 +50,18 @@ static const auth_method_t AUTH_METHODS[] = {
 /**
  * Find a suitable method from client-provided offer
  *
- * @param offer    array of offered authentication methods.
- * @param offerlen length of array of authentication methods.
+ * @param offer      array of offered authentication methods.
+ * @param offerlen   length of array of authentication methods.
+ * @param allow_anon flag allowing anonymous login.
  * @return descriptor of selected authentication method, or NULL if no match.
  */
-const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen)
+const auth_method_t *auth_negotiate_method(const unsigned char *offer, size_t offerlen, int allow_anon)
 {
     const auth_method_t *m;
 
     for (m = AUTH_METHODS; m->method != SOCKS_AUTH_INVALID; m++)
     {
-        if (m->method == SOCKS_AUTH_NONE && !authfile_anonymous(-1))
+        if (m->method == SOCKS_AUTH_NONE && (allow_anon == 0 || !authfile_anonymous(-1)))
             continue;
         if (m->callback != NULL && m->callback(NULL, -1, NULL) != 0)
             continue;

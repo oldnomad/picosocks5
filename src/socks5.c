@@ -237,7 +237,7 @@ static int socks_write(const socks_state_t *conn, const unsigned char *data, siz
 static int socks_negotiate_method(socks_state_t *conn)
 {
     ssize_t len;
-    int ret, stage;
+    int ret, stage, allow_anon;
     const auth_method_t *method;
     auth_context_t ctxt;
 
@@ -251,7 +251,8 @@ static int socks_negotiate_method(socks_state_t *conn)
                conn->logprefix, len, conn->buffer[0], conn->buffer[1]);
         return -1;
     }
-    method = auth_negotiate_method(&conn->buffer[2], conn->buffer[1]);
+    allow_anon = acl_check_client_address(ACL_ANON_GROUP, (const struct sockaddr *)&conn->client, sizeof(conn->client));
+    method = auth_negotiate_method(&conn->buffer[2], conn->buffer[1], allow_anon);
     conn->buffer[0] = SOCKS_VERSION5;
     conn->buffer[1] = method == NULL ? SOCKS_AUTH_INVALID : method->method;
     if (socks_write(conn, conn->buffer, 2) < 0)
