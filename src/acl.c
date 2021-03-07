@@ -303,7 +303,7 @@ static struct acl_set *modify_acl_group(const char *group) {
  * @param group   ACL set name.
  * @param addr    address to check.
  * @param addrlen size of address.
- * @return positive if address is allowed, or zero if not allowed, or -1 on error.
+ * @return true if address is allowed.
  */
 int acl_check_client_address(const char *group, const struct sockaddr *addr, size_t addrlen) {
     const struct acl_set *set;
@@ -409,7 +409,7 @@ const char *acl_get_request_type_name(int type)
  * @param type    request type.
  * @param addr    destination address.
  * @param addrlen destination address length.
- * @return positive if request is allowed, or zero if not allowed, or -1 on error.
+ * @return true if request is allowed.
  */
 int acl_check_request(const char *group, unsigned char type, const struct sockaddr *addr, size_t addrlen)
 {
