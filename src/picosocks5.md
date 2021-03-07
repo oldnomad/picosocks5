@@ -45,16 +45,16 @@ Listen port can be a decimal number of a service name (see **services**(5)).
     this option may override effect of options and configuration files
     specified earlier.
 
-`-a` [_auth-format_:]_auth-file_, `--auth` [_auth-format_:]_auth-file_
-:   Specify authentication file. If _auth-format_ is omitted, default format
-    is `"password"`. Any number of authentication files can be loaded.
-    Note that order in which authentication files are specified may
-    affect successful authentication if there is more than one secret
-    per user and method pair.
+`-a` [_auth-format_:]_auth-spec_, `--auth` [_auth-format_:]_auth-spec_
+:   Specify authentication source. If _auth-format_ is omitted, default
+    format is `"password"`. Any number of authentication sources can be
+    loaded. Note that order in which authentication sources are specified
+    may affect successful authentication if there is more than one secret
+    per user.
 
 `-A`, `--anonymous`
 :   Allow anonymous access even if there are users in the authentication
-    files.
+    sources.
 
 `-B` _bind-address_, `--bind` _bind-address_
 :   Specify external address to use for *BIND* and *UDP ASSOCIATE* commands.
@@ -171,7 +171,7 @@ dot-separated elements) are not accepted.
 
 ## Note on ACL network specification
 
-Due to internal reasons, a network with empty mask (0 bits) will be matched
+For internal reasons, a network with empty mask (0 bits) will be matched
 both by IPv4 and IPv6 addresses, regardless of address family of the network
 address.
 
@@ -212,53 +212,57 @@ Configuration file may contain named sections. These sections specify
 ACL sets for corresponding groups of users. That is, a section heading
 `[name]` starts a section with parameters for users in group `"name"`.
 
-Section headers may repeat. All parameters between this section header
-and the next section header (or end of file) belong to this section.
+Section headers may repeat. All parameters between section header `[name]`
+and the next section header (or end of file) belong to section `[name]`.
 
 ACL set section may include following parameters:
 
   * Configuration parameter **request**, containing rules allowing
     and disallowing specific types of requests. See command line
-    option **-request** for explanation.
+    option **--request** for explanation.
   * Configuration parameter **network**, containing rules allowing
     and disallowing IPv4 or IPv6 networks. See command line option
-    **-network** for explanation.
+    **--network** for explanation.
   * Configuration parameter **base**, specifying name of parent
     ACL set section. Rules from the parent section will be checked
     after rules specified in this section. If parent section is
-    not specified, root section is used.
+    not specified, root (global) section is used.
 
-Note that rules in ACL set section are checked only after SOCKS
+Note that rules in the ACL set section are checked only after SOCKS
 authentication. That means that an incoming connection from an
 address forbidden in an ACL set will be accepted, authenticated,
-and only after that dropped.
+and only after that dropped. The only exception from this rule
+is default ACL set `[*]` (see below).
 
 Special ACL set section with header `[*]`, if specified, will be
 used for anonymous users and for users without a group. It will
 not, however, be applied to users with a group for which no ACL
-set section was specified.
+set section was specified. If this section contains parameter
+**network**, clients coming from networks not allowed by this
+parameter will be denied anonymous access on authentication method
+negotiation stage.
 
-# AUTHENTICATION FILES
+# AUTHENTICATION SOURCES
 
-One or more authentication files can be specified in the parameters or in
-configuration files. Files are processed in order in which they appear.
-No checks for duplicates are performed, and all parsed authentication data
-is kept in memory.
+One or more authentication sources can be specified in the parameters
+or in configuration files. Sources are processed in order in which they
+appear. No checks for duplicates are performed.
 
-Authentication files are read before dropping privileges, so they need to
-be readable only to the user invoking the daemon. They may be inaccessible
-to effective user and group specified in **--user** and **--group**
-options.
+Authentication sources are initialized before dropping privileges, so,
+depending on the implementation, they may be readable only to the user
+invoking the daemon. They may be inaccessible to effective user and
+group specified in **--user** and **--group** options.
 
-Currently the only format supported for authentication files is `"password"`.
+Currently the only format supported for authentication sources is
+`"password"`.
 
 ## Password file format
 
 **NOTE:** File format `"password"` _changed_ between versions 0.2 and
-0.3. Authentication files from version 0.2 will be accepted with warnings,
+0.3. Password files from version 0.2 will be accepted with warnings,
 but this support may be dropped in future versions.
 
-Authentication file in format `"password"` is a text file with each line
+Authentication source in format `"password"` is a text file with each line
 containing colon-separated fields. No empty lines or comments are allowed.
 
 Each line must contain 3 fields containing:
