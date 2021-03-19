@@ -2,6 +2,8 @@ picosocks5 (0.13) UNRELEASED; urgency=medium
 
   * Only allow anonymous auth method to networks allowed
     by the default ACL set.
+  * Use internal HMAC-MD5 implementation when no crypto
+    library is available.
 
  -- Alec Kojaev <alec.kojaev@gmail.com>  Sun, 07 Mar 2021 15:40:52 +0300
 

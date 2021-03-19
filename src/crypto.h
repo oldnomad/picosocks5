@@ -18,7 +18,6 @@ void crypto_generate_nonce(unsigned char *buffer, size_t buflen);
 
 #define CRYPTO_MD5_SIZE 16 ///< Size of MD5 hash, bytes
 
-#if HAVE_CRYPTO_HMACMD5
 /**
  * Calculate HMAC-MD5 hash
  *
@@ -33,7 +32,6 @@ void crypto_generate_nonce(unsigned char *buffer, size_t buflen);
 int crypto_hmac_md5(const unsigned char *key, size_t keylen,
                     const unsigned char *msg, size_t msglen,
                     unsigned char *res, size_t reslen);
-#endif // HAVE_CRYPTO_HMACMD5
 
 extern const char   BASE64_PREFIX[];
 extern const size_t BASE64_PREFIX_LEN;

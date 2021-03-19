@@ -29,7 +29,7 @@ AM_CONDITIONAL([HAVE_PANDOC], [test "x${PANDOC}" = xyes])
 
 AC_CHECK_HEADERS([fcntl.h limits.h netdb.h stddef.h syslog.h termios.h unistd.h sys/socket.h],
                  [], [AC_MSG_ERROR([missing required header])])
-AC_CHECK_HEADERS([ifaddrs.h stdatomic.h])
+AC_CHECK_HEADERS([ifaddrs.h stdatomic.h endian.h])
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
@@ -56,23 +56,18 @@ AC_SEARCH_LIBS(crypt_r, [crypt],
 
 CRYPTO_MODULE=
 CRYPTO_LIBS=
-CRYPTO_HMACMD5=
 # Checking for crypto modules
 AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xgnutls \)],
       [AC_MSG_NOTICE([checking for GnuTLS crypto module])
        AC_CHECK_LIB([gnutls], [gnutls_check_version],
                     [CRYPTO_MODULE="gnutls"
-                     CRYPTO_LIBS="-lgnutls"
-                     CRYPTO_HMACMD5="yes"
-                    ])
+                     CRYPTO_LIBS="-lgnutls"])
       ])
 AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xopenssl \)],
       [AC_MSG_NOTICE([checking for OpenSSL crypto module])
        AC_CHECK_LIB([ssl], [SSL_CTX_new],
                     [CRYPTO_MODULE="openssl"
-                     CRYPTO_LIBS="-lssl -lcrypto"
-                     AC_CHECK_LIB([crypto], [EVP_md5], [CRYPTO_HMACMD5="yes"])
-                    ])
+                     CRYPTO_LIBS="-lssl -lcrypto"])
       ])
 ### ADD CUSTOM CRYPTO MODULES BELOW
 ### END OF CUSTOM CRYPTO MODULES
@@ -82,12 +77,9 @@ AS_IF([test -z "$CRYPTO_MODULE"],
              [AC_MSG_ERROR([unknown cryptographic library '$want_crypto' specified])],
              [AC_MSG_NOTICE([no crypto module, using POSIX version])
               CRYPTO_MODULE="emul"
-              CRYPTO_LIBS=
-              CRYPTO_HMACMD5=])
+              CRYPTO_LIBS=])
       ])
 
-AS_IF([test "x$CRYPTO_HMACMD5" = xyes ],
-      [AC_DEFINE([HAVE_CRYPTO_HMACMD5], [1], [Use HMAC-MD5 (RFC 2104, RFC 1321)])])
 LIBS="$CRYPTO_LIBS $LIBS"
 AC_DEFINE_UNQUOTED([HAVE_CRYPTO_MODULE], [$CRYPTO_MODULE], [Crypto module to use])
 

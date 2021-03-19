@@ -26,8 +26,8 @@ to be incompatible with GPL.
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
 - PicoSOCKS5 implements CHAP authentication for SOCKS5
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-chap-01.txt)),
-  including mutual authentication. This support requires additional crypto
-  libraries (GnuTLS or OpenSSL).
+  including mutual authentication. It is better when implemented using
+  external crypto libraries (GnuTLS or OpenSSL).
 - PicoSOCKS5 supports incoming and outgoing connections both in IPv4 and
   IPv6. In particular, it can accept requests to connect to IPv6 servers
   from IPv4 clients, and vice versa, serving as a gateway for mechanism
@@ -62,15 +62,26 @@ For building PicoSOCKS5 you'll need:
   - Format specifier `"%m"` in `printf(3)` family.
   - Optionally, `getifaddrs(3)`. The program will compile without it,
     but when it's available, additional functionality is enabled.
+  - Optionally, header `<endian.h>` and macros `htole32(x)` and
+    `le32toh(x)` defined in it.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
 
-- If you want to enable CHAP authentication method, you'll also need either
-  GnuTLS or OpenSSL library. Following features are used:
+- If you want to enable CHAP authentication method, you might want to use
+  either GnuTLS or OpenSSL library. Following features are used:
 
   - Random bytes generation.
   - MD5 hash and HMAC functions.
+
+  Without at least one of these libraries, PicoSOCKS5 will use standard
+  `rand(3)`, which is very weak, and a home-grown HMAC-MD5 implementation,
+  which may contain errors. Also, internal HMAC-MD5 implementation needs
+  macros `htole32(x)` and `le32toh(x)` for converting 32-bit unsigned
+  integers between native (host) byte order and little-endian byte order.
+  In many systems these macros are defined in header file `<endian.h>`,
+  but if your system is not one of them, you'll have to define these
+  macros yourself.
 
 - GNU Autoconf/Automake, and their dependencies. The project was built
   initially using automake version 1.15, but version 1.14 is also known

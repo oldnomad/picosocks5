@@ -162,9 +162,7 @@ ssize_t authpwd_callback(void *handle, authfile_method_t method, const char *use
 {
     const struct auth_user *list = handle;
     const struct auth_user *u;
-#if HAVE_CRYPTO_HMACMD5
     unsigned char hash[CRYPTO_MD5_SIZE];
-#endif
 
     switch (method)
     {
@@ -222,7 +220,6 @@ ssize_t authpwd_callback(void *handle, authfile_method_t method, const char *use
             }
         }
         return -1;
-#if HAVE_CRYPTO_HMACMD5
     case AUTHFILE_HMAC_MD5_CHALLENGE:
         if (user == NULL)
         {
@@ -284,12 +281,6 @@ ssize_t authpwd_callback(void *handle, authfile_method_t method, const char *use
                             buffer, CRYPTO_MD5_SIZE) != 0)
             return -1;
         return CRYPTO_MD5_SIZE;
-#else // HAVE_CRYPTO_HMACMD5
-    default:
-        (void)buffer;
-        (void)bufsize;
-        break;
-#endif // HAVE_CRYPTO_HMACMD5
     }
     return -1;
 }
