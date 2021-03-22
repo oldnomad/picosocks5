@@ -3,22 +3,20 @@
 ## How to add a crypto library
 
 PicoSOCKS5 can be compiled with GnuTLS or OpenSSL, and even without any crypto
-library at all (though in this case it doesn't support CHAP authentication).
-To compile PicoSOCKS5 with a new crypto library you have to perform two tasks:
+library at all. To compile PicoSOCKS5 with a new crypto library you have to
+perform two tasks:
 
   1. Write a wrapper for the library.
   2. Integrate the wrapper into the configure script.
 
-First, you have to decide three parameters:
+First, you have to decide following parameters:
 
   - Choose a unique name ("module name") by which the crypto library will
-    be known in th configuration script. Lower case and no spaces is the
+    be known in the configuration script. Lower case and no spaces is the
     preferred format. Names "yes", "no", "emul", "gnutls", and "openssl"
     must not be used.
   - Choose a list of options that must be passed to the compiler when
     linking with the library.
-  - Choose whether you want to implement HMAC-MD5. If it's implemented,
-    PicoSOCKS5 will be able to use CHAP authentication.
 
 ### Writing a wrapper
 
@@ -27,12 +25,11 @@ First, you have to decide three parameters:
     including file.
   - The wrapper source file must reside in `src/` and its name must have
     format `crypto-NAME.c`, where `NAME` is the chosen crypto module name.
-  - The wrapper must implement methods `crypto_init` and
-    `crypto_generate_nonce`, and may implement `crypto_hmac_md5` (used for
-    CHAP authentication), Signatures for these methods are specified in file
+  - The wrapper must implement methods `crypto_init`, `crypto_generate_nonce`,
+    and `crypto_hmac_md5`. Signatures for these methods are specified in file
     `src/crypto.h`.
 
-For reference look at implemented wrappers (`src/crypto-gnutls.c` and
+For reference look at the implemented wrappers (`src/crypto-gnutls.c` and
 `src/crypto-openssl.c`).
 
 ### Integrating into configuration script
@@ -50,24 +47,19 @@ library you need is installed, and set following variables:
   - `CRYPTO_MODULE` is set to your crypto module name.
   - `CRYPTO_LIBS` must be set to additional compiler options needed for
     linking.
-  - `CRYPTO_HMACMD5` must be set to `yes` if the implementor chose to
-    implement HMAC-MD5.
 
 In the example below:
 
   - The crypto module name is `my_lib`.
   - Linking requires compiler option `-lmy_lib_name`, and the library has
     function `my_lib_function` that can be used for library detection.
-  - The implementor chose to implement HMAC-MD5.
 
 ```
 AS_IF([test -z "$CRYPTO_MODULE" -a \( "x$want_crypto" = xyes -o "x$want_crypto" = xmy_lib \)],
       [AC_MSG_NOTICE([checking for MyLib crypto module])
        AC_CHECK_LIB([my_lib_name], [my_lib_function],
                     [CRYPTO_MODULE="my_lib"
-                     CRYPTO_LIBS="-lmy_lib_name"
-                     CRYPTO_HMACMD5="yes"
-                    ])
+                     CRYPTO_LIBS="-lmy_lib_name"])
       ])
 ```
 
