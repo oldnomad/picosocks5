@@ -38,7 +38,9 @@ Description: lightweight and simple SOCKS5 proxy
  PicoSOCKS5 is recommended for simple setups without complex
  permissions or high traffic volume.
  .
- This package contains version of PicoSOCKS5 built without CHAP support.
+ This package contains version of PicoSOCKS5 built with internal
+ HMAC-MD5 implemenation and low quality (but portable) pseudo-random
+ number generator.
 
 Package: picosocks5-gnutls
 Architecture: any
