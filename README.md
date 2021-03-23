@@ -26,8 +26,9 @@ to be incompatible with GPL.
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
 - PicoSOCKS5 implements CHAP authentication for SOCKS5
   ([draft](https://www.ietf.org/archive/id/draft-ietf-aft-socks-chap-01.txt)),
-  including mutual authentication. It is better when implemented using
-  external crypto libraries (GnuTLS or OpenSSL).
+  including mutual authentication. PicoSOCKS5 can use external crypto libraries
+  (GnuTLS or OpenSSL), if available, or fall back to its own home-grown crypto
+  implementation.
 - PicoSOCKS5 supports incoming and outgoing connections both in IPv4 and
   IPv6. In particular, it can accept requests to connect to IPv6 servers
   from IPv4 clients, and vice versa, serving as a gateway for mechanism
@@ -63,7 +64,9 @@ For building PicoSOCKS5 you'll need:
   - Optionally, `getifaddrs(3)`. The program will compile without it,
     but when it's available, additional functionality is enabled.
   - Optionally, header `<endian.h>` and macros `htole32(x)` and
-    `le32toh(x)` defined in it.
+    `le32toh(x)` defined in it. These macros are only needed by the
+    home-grown crypto implemenation when compiled without external
+    crypto libraries.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
@@ -76,7 +79,7 @@ For building PicoSOCKS5 you'll need:
 
   Without at least one of these libraries, PicoSOCKS5 will use standard
   `rand(3)`, which is very weak, and a home-grown HMAC-MD5 implementation,
-  which may contain errors. Also, internal HMAC-MD5 implementation needs
+  which is not provably secure. Also, internal HMAC-MD5 implementation needs
   macros `htole32(x)` and `le32toh(x)` for converting 32-bit unsigned
   integers between native (host) byte order and little-endian byte order.
   In many systems these macros are defined in header file `<endian.h>`,
@@ -97,6 +100,13 @@ cd picosocks5
 autoreconf -f -i -Wall
 ./configure
 ```
+
+Configure script supports option `with-crypto=<MODULE>`, which allows
+you to specify which crypto library you want to use for CHAP authentication.
+Possible values are `yes` (default, use whatever is available), `gnutls`,
+`openssl`, and `no` (use internal implementation). It is possible to write
+your own wrapper if you want to use some other library (see
+[documentation](docs/crypto-libs.md)).
 
 Next, build and install the daemon:
 
