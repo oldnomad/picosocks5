@@ -43,7 +43,7 @@ AC_FUNC_STRERROR_R
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 memchr memmove memset select socket strcasecmp strchr strrchr strdup strtod strtoul],
                [], [AC_MSG_ERROR([missing required function])])
-AC_CHECK_FUNCS([getifaddrs])
+AC_CHECK_FUNCS([getifaddrs getentropy])
 AS_IF([test "x$ac_cv_func_getifaddrs" = xyes],
       [AC_DEFINE([HAVE_IFADDRS_SUPPORT], [1], [Support interface names in bind options])])
 AS_IF([test "x$ac_cv_type_atomic_ulong" = xyes -a "x$ac_cv_header_stdatomic_h" = xyes],

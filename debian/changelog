@@ -1,3 +1,9 @@
+picosocks5 (0.14) UNRELEASED; urgency=medium
+
+  * Use `getentropy(3)` for PRNG, if available.
+
+ -- Alec Kojaev <alec.kojaev@gmail.com>  Sat, 27 Mar 2021 01:39:35 +0300
+
 picosocks5 (0.13) unstable; urgency=medium
 
   * Only allow anonymous auth method to networks allowed

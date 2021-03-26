@@ -66,7 +66,14 @@ For building PicoSOCKS5 you'll need:
   - Optionally, header `<endian.h>` and macros `htole32(x)` and
     `le32toh(x)` defined in it. These macros are only needed by the
     home-grown crypto implemenation when compiled without external
-    crypto libraries.
+    crypto libraries. If there is no `<endian.h>` for your platform,
+    or if it doesn't defined these macros, and you want to avoid
+    using external crypto, you'll have to define these macros
+    yourself and pass them in `CFLAGS`.
+  - Optionally, `getentropy(3)`. This function is only useful for the
+    home-grown crypto implemenation when compiled without external
+    crypto libraries. If this functions is not found (or if it fails
+    at runtime), low-quality `rand(3)` will be used instead.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
@@ -77,14 +84,15 @@ For building PicoSOCKS5 you'll need:
   - Random bytes generation.
   - MD5 hash and HMAC functions.
 
-  Without at least one of these libraries, PicoSOCKS5 will use standard
-  `rand(3)`, which is very weak, and a home-grown HMAC-MD5 implementation,
-  which is not provably secure. Also, internal HMAC-MD5 implementation needs
-  macros `htole32(x)` and `le32toh(x)` for converting 32-bit unsigned
-  integers between native (host) byte order and little-endian byte order.
-  In many systems these macros are defined in header file `<endian.h>`,
-  but if your system is not one of them, you'll have to define these
-  macros yourself.
+  Without at least one of these libraries, PicoSOCKS5 will use
+  `getentropy(3)` (if available) or standard `rand(3)` (which is very
+  low quality), and a home-grown HMAC-MD5 implementation, which is not
+  provably secure. Also, internal HMAC-MD5 implementation needs macros
+  `htole32(x)` and `le32toh(x)` for converting 32-bit unsigned integers
+  between native (host) byte order and little-endian byte order. In many
+  systems these macros are defined in header file `<endian.h>`, but if
+  your system is not one of them, you'll have to define these macros
+  yourself and pass your definitions in `CFLAGS`.
 
 - GNU Autoconf/Automake, and their dependencies. The project was built
   initially using automake version 1.15, but version 1.14 is also known
