@@ -16,3 +16,14 @@ CLEANFILES = *.man
 
 .md.man:
 	pandoc -s -t man -o $@ $<
+
+distclean-local: clean-doxygen
+
+.PHONY: doxygen clean-doxygen
+
+doxygen:
+	mkdir -p doc/
+	doxygen Doxyfile
+
+clean-doxygen:
+	rm -rf doc/
