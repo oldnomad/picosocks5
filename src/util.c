@@ -15,6 +15,15 @@
 #include "util.h"
 
 /**
+ * Prefix for Base64 secret encoding
+ */
+const char   BASE64_PREFIX[]   = "$base64$";
+/**
+ * Length of prefix for Base64 secret encoding
+ */
+const size_t BASE64_PREFIX_LEN = sizeof(BASE64_PREFIX) - 1;
+
+/**
  * Base64 alphabet (RFC 4648)
  */
 static const char BASE64_ALPHA[65] = "ABCDEFGHIJKLMNOP"

@@ -14,9 +14,8 @@
 #include <errno.h>
 #include <getopt.h>
 #include <crypt.h>
-#include "logger.h"
-#include "crypto.h"
 #include "util.h"
+#include "internal/prng.h"
 
 #define MAX_PASSWORD_LENGTH  1024 ///< Max password length (including newline).
 #define MAX_SECRET_SIZE      4096 ///< Max secret data size.
@@ -141,18 +140,18 @@ static int ask_password(char *buffer, size_t bufsize)
 
     if ((buffer2 = malloc(bufsize)) == NULL)
     {
-        logger(LOG_ERR, "Not enough memory");
+        fprintf(stderr, "ERROR: Not enough memory\n");
         return -1;
     }
     if (prompt_password("Enter password", buffer, bufsize) < 0 ||
         prompt_password("Enter password (again)", buffer2, bufsize) < 0)
     {
-        logger(LOG_ERR, "Error reading password: %m");
+        fprintf(stderr, "ERROR: Failure reading password: %m\n");
         result = -1;
     }
     else if (strcmp(buffer, buffer2) != 0)
     {
-        logger(LOG_ERR, "Passwords mismatch");
+        fprintf(stderr, "ERROR: Passwords mismatch\n");
         result = -1;
     }
     else
@@ -182,7 +181,7 @@ static ssize_t encode_crypt (const char *password, char *buffer, size_t bufsize)
 
     memcpy(salt, DEFAULT_SALT_PREFIX, sizeof(DEFAULT_SALT_PREFIX) - 1);
     ep = &salt[sizeof(DEFAULT_SALT_PREFIX) - 1];
-    crypto_generate_nonce(randval, sizeof(randval));
+    prng_generate(randval, sizeof(randval));
     rval = 0;
     for (i = 0, j = 0; i < DEFAULT_SALT_SIZE; i++)
     {
@@ -208,13 +207,13 @@ static ssize_t encode_crypt (const char *password, char *buffer, size_t bufsize)
     cpass = crypt_r(password, salt, &cdata);
     if (cpass == NULL)
     {
-        logger(LOG_ERR, "Encryption error: %m");
+        fprintf(stderr, "ERROR: Encryption failed: %m\n");
         return -1;
     }
     csize = strlen(cpass);
     if (bufsize < csize)
     {
-        logger(LOG_ERR, "Encrypted password is too long");
+        fprintf(stderr, "ERROR: Encrypted password is too long\n");
         return -1;
     }
     memcpy(buffer, cpass, csize);
@@ -236,7 +235,7 @@ static ssize_t encode_base64(const char *password, char *buffer, size_t bufsize)
     if ((seclen = util_base64_encode(password, strlen(password), buffer, bufsize)) < 0)
     {
 TOO_LONG:
-        logger(LOG_ERR, "Encoded password is too long");
+        fprintf(stderr, "ERROR: Encoded password is too long\n");
         return -1;
     }
     return seclen + BASE64_PREFIX_LEN;
@@ -302,10 +301,9 @@ int main(int argc, char **argv)
     username = argv[optind];
     if ((optind + 1) < argc)
         usage(argv[0]);
-    logger_init(1, 0, LOG_WARNING);
     if (ask_password(password, sizeof(password)) < 0)
         return 1;
-    crypto_init();
+    prng_init();
     for (enc = METHODS, mask = 1; enc->name != NULL; enc++, mask <<= 1)
     {
         if ((methods & mask) == 0)
@@ -316,3 +314,5 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+
+#include "internal/prng.c"

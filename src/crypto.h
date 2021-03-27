@@ -32,6 +32,3 @@ void crypto_generate_nonce(unsigned char *buffer, size_t buflen);
 int crypto_hmac_md5(const unsigned char *key, size_t keylen,
                     const unsigned char *msg, size_t msglen,
                     unsigned char *res, size_t reslen);
-
-extern const char   BASE64_PREFIX[];
-extern const size_t BASE64_PREFIX_LEN;

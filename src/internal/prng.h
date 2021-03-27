@@ -15,6 +15,6 @@
 #endif
 
 PRNG_DECL void prng_init(void);
-PRNG_DECL void prng_generate(char *buffer, size_t size);
+PRNG_DECL void prng_generate(void *buffer, size_t size);
 
 #endif // PRNG_H_INCLUDED_

@@ -29,15 +29,17 @@ PRNG_DECL void prng_init(void)
  * @param buffer buffer for data.
  * @param size   size of buffer.
  */
-PRNG_DECL void prng_generate(char *buffer, size_t size)
+PRNG_DECL void prng_generate(void *buffer, size_t size)
 {
+    unsigned char *ptr;
+
 #if HAVE_GETENTROPY
     {
         size_t len = 0;
-        for (; size != 0; size -= len, buffer += len)
+        for (ptr = buffer; size != 0; size -= len, ptr += len)
         {
             len = (size > 256) ? 256 : size;
-            if (getentropy(buffer, len) != 0)
+            if (getentropy(ptr, len) != 0)
                 goto DEF_RAND;
         }
         return;
@@ -46,7 +48,7 @@ PRNG_DECL void prng_generate(char *buffer, size_t size)
 DEF_RAND:
     {
         size_t i;
-        for (i = 0; i < size; i++)
-            *buffer++ = rand() & 0xFF;
+        for (ptr = buffer, i = 0; i < size; i++)
+            *ptr++ = rand() & 0xFF;
     }
 }

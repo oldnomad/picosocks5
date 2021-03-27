@@ -13,3 +13,6 @@ int util_decode_network(const struct sockaddr *addr, socklen_t addrlen, unsigned
 
 ssize_t util_base64_encode(const void *data, size_t datalen, char *buffer, size_t bufsize);
 ssize_t util_base64_decode(const char *text, void *buffer, size_t bufsize);
+
+extern const char   BASE64_PREFIX[];
+extern const size_t BASE64_PREFIX_LEN;

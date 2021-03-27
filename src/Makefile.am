@@ -5,7 +5,7 @@ bin_PROGRAMS = pis5user
 picosocks5_SOURCES = main.c cmdline.c inifile.c logger.c util.c crypto.c \
     socks5.c acl.c auth.c authfile.c authfile-password.c
 
-pis5user_SOURCES = pis5-user.c logger.c util.c crypto.c
+pis5user_SOURCES = pis5-user.c util.c
 
 if HAVE_PANDOC
 man1_MANS = pis5user.man
