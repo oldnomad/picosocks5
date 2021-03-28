@@ -63,17 +63,18 @@ For building PicoSOCKS5 you'll need:
   - Format specifier `"%m"` in `printf(3)` family.
   - Optionally, `getifaddrs(3)`. The program will compile without it,
     but when it's available, additional functionality is enabled.
-  - Optionally, header `<endian.h>` and macros `htole32(x)` and
-    `le32toh(x)` defined in it. These macros are only needed by the
-    home-grown crypto implemenation when compiled without external
-    crypto libraries. If there is no `<endian.h>` for your platform,
-    or if it doesn't defined these macros, and you want to avoid
-    using external crypto, you'll have to define these macros
-    yourself and pass them in `CFLAGS`.
-  - Optionally, `getentropy(3)`. This function is only useful for the
-    home-grown crypto implemenation when compiled without external
-    crypto libraries. If this functions is not found (or if it fails
-    at runtime), low-quality `rand(3)` will be used instead.
+  - If the program is compiled without external crypto libraries, it
+    will use home-grown cypto implementation, which uses following
+    extensions:
+    - Header `<endian.h>` (if available) and macros `htole32(x)` and
+      `le32toh(x)` defined in it. If there is no `<endian.h>` for
+      your platform, or if it doesn't define these macros, and you
+      want to avoid using external crypto, you'll have to define
+      these macros yourself and pass them in `CFLAGS`.
+    - Optionally, `getentropy(3)`. If this function is not available,
+      the program will use direct reading from `/dev/urandom`. If
+      either method fails at runtime, low-quality standard `rand(3)`
+      will be used instead.
 
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.

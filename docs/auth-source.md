@@ -85,7 +85,7 @@ Following methods are defined:
     to generate a response in the output buffer and return
     its length on success, or `-1` on error.
 
-The callback must implement method at least the method
-`AUTHFILE_CHECK`. It must also properly handle call with
-NULL parameter `user` (as described above) and check validity
-of all parameters in calls that don't ignore these parameters.
+The callback must implement at least the method `AUTHFILE_CHECK`.
+It must also properly handle call with NULL parameter `user`
+(as described above) and check validity of all parameters in
+calls that don't ignore these parameters.
