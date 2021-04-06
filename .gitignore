@@ -16,8 +16,11 @@ depcomp
 install-sh
 missing
 stamp-h1
+test-driver
+.dirstamp
 Makefile
 src/Makefile
+tests/Makefile
 
 # Build artifacts
 src/*.o
@@ -25,6 +28,13 @@ src/.deps
 src/picosocks5
 src/pis5user
 src/*.man
+
+# Test artifacts
+tests/*.o
+tests/*.log
+tests/*.trs
+tests/.deps
+tests/crypto
 
 # Debian build artefacts
 debian/.debhelper/

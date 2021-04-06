@@ -3,11 +3,12 @@ m4_define([AC_PACKAGE_COPYRIGHT], [Copyright (c) 2018-2020 Alec Kojaev <alec.koj
 AC_DEFINE([PACKAGE_COPYRIGHT], ["AC_PACKAGE_COPYRIGHT"], [Package copyright])
 AC_COPYRIGHT([AC_PACKAGE_COPYRIGHT])
 AC_MSG_NOTICE([detected version: AC_PACKAGE_VERSION])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
+ tests/Makefile
 ])
 want_crypto=yes
 AC_ARG_WITH([crypto],
@@ -49,9 +50,9 @@ AS_IF([test "x$ac_cv_func_getifaddrs" = xyes],
 AS_IF([test "x$ac_cv_type_atomic_ulong" = xyes -a "x$ac_cv_header_stdatomic_h" = xyes],
       [AC_DEFINE([HAVE_STDC_ATOMICS], [1], [Support thread counters])])
 
-AC_SEARCH_LIBS(pthread_create, [pthread],
+AC_SEARCH_LIBS([pthread_create], [pthread],
                [], [AC_MSG_ERROR([missing pthread implementation])])
-AC_SEARCH_LIBS(crypt_r, [crypt],
+AC_SEARCH_LIBS([crypt_r], [crypt],
                [], [AC_MSG_ERROR([missing crypt_r implementation])])
 
 CRYPTO_MODULE=
@@ -82,5 +83,14 @@ AS_IF([test -z "$CRYPTO_MODULE"],
 
 LIBS="$CRYPTO_LIBS $LIBS"
 AC_DEFINE_UNQUOTED([HAVE_CRYPTO_MODULE], [$CRYPTO_MODULE], [Crypto module to use])
+
+AC_CHECK_HEADERS([cmocka.h], [], [], [
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <stdint.h>
+])
+AC_CHECK_LIB([cmocka], [cmocka_set_message_output], [true])
+AM_CONDITIONAL([CMOCKA_PRESENT], [test "x$ac_cv_header_cmocka_h" = xyes -a "x$ac_cv_lib_cmocka_cmocka_set_message_output" = xyes])
 
 AC_OUTPUT

@@ -70,20 +70,3 @@ int crypto_hmac_md5(const unsigned char *key, size_t keylen,
 
 #include "internal/md5.c"
 #include "internal/prng.c"
-
-#ifdef TEST_HMAC_MD5
-#include <stdio.h>
-
-int main() {
-    unsigned char res[CRYPTO_MD5_SIZE];
-    int code;
-    size_t i;
-
-    code = crypto_hmac_md5("Jefe", 4, "what do ya want for nothing?", 28, res, sizeof(res));
-    printf("Result: %d\n", code);
-    printf("Hash: ");
-    for (i = 0; i < sizeof(res); i++)
-        printf("%02x", res[i]);
-    printf("\n");
-}
-#endif
