@@ -92,5 +92,8 @@ AC_CHECK_HEADERS([cmocka.h], [], [], [
 ])
 AC_CHECK_LIB([cmocka], [cmocka_set_message_output], [true])
 AM_CONDITIONAL([CMOCKA_PRESENT], [test "x$ac_cv_header_cmocka_h" = xyes -a "x$ac_cv_lib_cmocka_cmocka_set_message_output" = xyes])
+AC_CHECK_PROGS([LCOV], [lcov])
+AC_CHECK_PROGS([GENHTML], [genhtml])
+AM_CONDITIONAL([LCOV_PRESENT], [test -n "$ac_cv_prog_LCOV" -a -n "$ac_cv_prog_GENHTML"])
 
 AC_OUTPUT

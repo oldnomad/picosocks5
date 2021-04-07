@@ -36,6 +36,12 @@ tests/*.trs
 tests/.deps
 tests/crypto
 
+# Coverage artifacts
+coverage.info
+coverage/
+*.gcda
+*.gcno
+
 # Debian build artefacts
 debian/.debhelper/
 debian/debhelper-build-stamp
