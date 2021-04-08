@@ -35,6 +35,7 @@ tests/*.log
 tests/*.trs
 tests/.deps
 tests/crypto
+tests/util
 
 # Coverage artifacts
 coverage.info

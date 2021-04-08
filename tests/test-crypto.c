@@ -103,6 +103,7 @@ static void test_hmac_md5(void **state)
         print_message("-- HMAC-MD5 test %zu\n", i + 1);
         int code = crypto_hmac_md5(TEST_VECTORS[i].key, TEST_VECTORS[i].keylen,
             TEST_VECTORS[i].msg, TEST_VECTORS[i].msglen, res, sizeof(res));
+        assert_int_equal(code, 0);
         assert_memory_equal(res, TEST_VECTORS[i].res, sizeof(res));
     }
 }
