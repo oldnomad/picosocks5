@@ -18,9 +18,11 @@ to be incompatible with GPL.
 
 - PicoSOCKS5 implements SOCKS5 ([RFC 1928](https://www.ietf.org/rfc/rfc1928.txt)).
   Currently only `CONNECT` and `BIND` are supported, but `UDP ASSOCIATE`
-  may be implemented later. Earlier versions of SOCKS (SOCKS4, SOCKS4a)
-  are not implemented. Drafts [SOCKS5a](https://www.ietf.org/archive/id/draft-ietf-aft-socks-pro-v5-05.txt),
-  [SOCKS6](https://www.ietf.org/id/draft-olteanu-intarea-socks-6-06.txt),
+  may be implemented later.
+  Draft [SOCKS5a](https://datatracker.ietf.org/doc/draft-ietf-aft-socks-pro-v5/)
+  is aprtially taken into account, but not completely implemented.
+  Earlier versions of SOCKS (SOCKS4, SOCKS4a) are not implemented.
+  Draft [SOCKS6](https://datatracker.ietf.org/doc/draft-olteanu-intarea-socks-6/)
   and other enhancements are not implemented.
 - PicoSOCKS5 implements username/password authentication for SOCKS5
   ([RFC 1929](https://www.ietf.org/rfc/rfc1929.txt)).
