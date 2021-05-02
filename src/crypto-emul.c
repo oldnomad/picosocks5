@@ -5,7 +5,6 @@
  * Implementation of MD5 in this file is based on classic public domain
  * code by Colin Plumb.
  */
-//#include <time.h>
 #include <stdint.h>
 #include <string.h>
 #include "internal/md5.h"
