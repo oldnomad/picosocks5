@@ -10,5 +10,5 @@ coverage/index.html: coverage.info
 	$(GENHTML) coverage.info --output-directory coverage/
 
 coverage.info: check
-	$(LCOV) --capture --directory . --output $@
+	$(LCOV) --capture --directory src/ --output $@
 endif

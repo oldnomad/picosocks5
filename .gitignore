@@ -23,17 +23,15 @@ src/Makefile
 tests/Makefile
 
 # Build artifacts
-src/*.o
-src/.deps
+**/*.o
+**/.deps/
 src/picosocks5
 src/pis5user
 src/*.man
 
 # Test artifacts
-tests/*.o
 tests/*.log
 tests/*.trs
-tests/.deps
 tests/crypto
 tests/util
 

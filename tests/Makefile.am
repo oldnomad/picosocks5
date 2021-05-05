@@ -28,7 +28,7 @@ CMOCKA_LDFLAGS_APP = -lcmocka
 
 check_PROGRAMS += crypto
 TESTS += crypto
-crypto_SOURCES = test-crypto.c ../src/crypto.c
+crypto_SOURCES = test-crypto.c ../src/crypto.c mocks/logger.c
 crypto_CFLAGS = $(TESTS_CFLAGS_APP) $(COV_CFLAGS_APP) $(CMOCKA_CFLAGS_APP)
 crypto_LDFLAGS = $(COV_LDFLAGS_APP) $(CMOCKA_LDFLAGS_APP)
 

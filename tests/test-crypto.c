@@ -6,24 +6,6 @@
 #include <setjmp.h>
 #include <cmocka.h>
 #include "crypto.h"
-#include "logger.h"
-
-void logger_vararg(int prio, const char *msg, va_list args)
-{
-    char text[1024] = "???";
-
-    vsnprintf(text, sizeof(text), msg, args);
-    fail_msg("LOGGER: %s", text);
-}
-
-void logger(int prio, const char *msg, ...)
-{
-    va_list args;
-
-    va_start(args, msg);
-    logger_vararg(prio, msg, args);
-    va_end(args);
-}
 
 static int setup(void **state)
 {
