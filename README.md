@@ -20,7 +20,7 @@ to be incompatible with GPL.
   Currently only `CONNECT` and `BIND` are supported, but `UDP ASSOCIATE`
   may be implemented later.
   Draft [SOCKS5a](https://datatracker.ietf.org/doc/draft-ietf-aft-socks-pro-v5/)
-  is aprtially taken into account, but not completely implemented.
+  is partially taken into account, but not completely implemented.
   Earlier versions of SOCKS (SOCKS4, SOCKS4a) are not implemented.
   Draft [SOCKS6](https://datatracker.ietf.org/doc/draft-olteanu-intarea-socks-6/)
   and other enhancements are not implemented.
@@ -66,7 +66,7 @@ For building PicoSOCKS5 you'll need:
   - Optionally, `getifaddrs(3)`. The program will compile without it,
     but when it's available, additional functionality is enabled.
   - If the program is compiled without external crypto libraries, it
-    will use home-grown cypto implementation, which uses following
+    will use home-grown crypto implementation, which uses following
     extensions:
     - Header `<endian.h>` (if available) and macros `htole32(x)` and
       `le32toh(x)` defined in it. If there is no `<endian.h>` for
@@ -81,8 +81,8 @@ For building PicoSOCKS5 you'll need:
   So if you have another POSIX-compliant C runtime library that includes
   these features, PicoSOCKS5 can be ported to it.
 
-- If you want to enable CHAP authentication method, you might want to use
-  either GnuTLS or OpenSSL library. Following features are used:
+- For crypto implementation, PicoSOCKS5 can use GnuTLS or OpenSSL library.
+  Following features are used:
 
   - Random bytes generation.
   - MD5 hash and HMAC functions.
@@ -96,6 +96,10 @@ For building PicoSOCKS5 you'll need:
   systems these macros are defined in header file `<endian.h>`, but if
   your system is not one of them, you'll have to define these macros
   yourself and pass your definitions in `CFLAGS`.
+
+  If you have another library implementing random bytes generation
+  and HMAC-MD5, you can write a wrapper for it as described in
+  [docs/crypto-libs.md](docs/crypto-libs.md).
 
 - GNU Autoconf/Automake, and their dependencies. The project was built
   initially using automake version 1.15, but version 1.14 is also known
