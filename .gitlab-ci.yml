@@ -1,62 +1,68 @@
+# You can override the included template(s) by including variable overrides
+# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
+# Note that environment variables can be set in several places
+# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 image: debian:stable-slim
-
 stages:
-  - build
-  - package
-  - release
-
-.build-common:
+- build
+- package
+- release
+- test
+".build-common":
   before_script:
-    - apt-get update -qq
-    - apt-get install -y -qq build-essential autoconf automake debhelper pandoc git pkg-config gnutls-dev libssl-dev
-    - autoconf --version
-    - automake --version
-    - gcc --version
-    - pkg-config --modversion gnutls
-    - pkg-config --modversion libssl
-
+  - apt-get update -qq
+  - apt-get install -y -qq build-essential autoconf automake debhelper pandoc git
+    pkg-config gnutls-dev libssl-dev
+  - autoconf --version
+  - automake --version
+  - gcc --version
+  - pkg-config --modversion gnutls
+  - pkg-config --modversion libssl
 test-build:
   stage: build
-  extends: .build-common
+  extends: ".build-common"
   script:
-    - autoreconf -f -i -Wall
-    - ./configure --with-crypto=gnutls
-    - make clean all
-    - ./configure --with-crypto=openssl
-    - make clean all
-    - ./configure --without-crypto
-    - make clean all
+  - autoreconf -f -i -Wall
+  - "./configure --with-crypto=gnutls"
+  - make clean all
+  - "./configure --with-crypto=openssl"
+  - make clean all
+  - "./configure --without-crypto"
+  - make clean all
   except:
-    - tags
-
+  - tags
 debian-packages:
   stage: package
-  extends: .build-common
+  extends: ".build-common"
   script:
-    - autoreconf -f -i -Wall
-    - dpkg-buildpackage -us -uc
-    - mkdir build
-    - mv ../picosocks5*.deb build/
-    - mv ../picosocks5*.dsc build/
-    - mv ../picosocks5*.changes build/
-    - mv ../picosocks5*.buildinfo build/
-    - echo '# Changes:' >build/release-notes.md
-    - dpkg-parsechangelog -S Changes | tail -n +3 >>build/release-notes.md
+  - autoreconf -f -i -Wall
+  - dpkg-buildpackage -us -uc
+  - mkdir build
+  - mv ../picosocks5*.deb build/
+  - mv ../picosocks5*.dsc build/
+  - mv ../picosocks5*.changes build/
+  - mv ../picosocks5*.buildinfo build/
+  - echo '# Changes:' >build/release-notes.md
+  - dpkg-parsechangelog -S Changes | tail -n +3 >>build/release-notes.md
   only:
-    - tags
+  - tags
   artifacts:
-    name: "picosocks5-$CI_COMMIT_TAG"
+    name: picosocks5-$CI_COMMIT_TAG
     paths:
-      - build/*
-
+    - build/*
 release-job:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   needs:
-    - job: debian-packages
-      artifacts: true
+  - job: debian-packages
+    artifacts: true
   script:
-    - echo 'Release job'
-    - release-cli create --tag-name "$CI_COMMIT_TAG" --description "$(cat build/release-notes.md)"
+  - echo 'Release job'
+  - release-cli create --tag-name "$CI_COMMIT_TAG" --description "$(cat build/release-notes.md)"
   only:
-    - tags
+  - tags
+sast:
+  stage: test
+include:
+- template: Security/SAST.gitlab-ci.yml
