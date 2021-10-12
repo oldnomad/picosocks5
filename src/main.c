@@ -11,6 +11,7 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include "socks5.h"
 #include "crypto.h"
 #include "logger.h"

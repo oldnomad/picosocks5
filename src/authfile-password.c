@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <crypt.h>
+#include <sys/socket.h>
 #include "auth.h"
 #include "authfile.h"
 #include "crypto.h"

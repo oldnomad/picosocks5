@@ -2,7 +2,8 @@
 [![pipeline status](https://gitlab.com/oldnomad/picosocks5/badges/master/pipeline.svg)](https://gitlab.com/oldnomad/picosocks5/commits/master)
 
 PicoSOCKS5 is a very simple and very lightweight SOCKS5 proxy server.
-It is written in pure C and by default uses no extra libraries besides GLibc.
+It is written in pure C and by default uses no extra libraries besides GLibc
+or any other POSIX-compatible runtime (such as `musl`).
 
 # License
 
@@ -56,8 +57,8 @@ For building PicoSOCKS5 you'll need:
   ported to any compiler supporting it; however, if C11 or later
   is supported, some of newer features may be used.
 
-- GLibc or compatible library. PicoSOCKS5 uses POSIX.1-2017 (with XSI
-  extensions) and following GNU extensions:
+- GLibc or compatible library (such as `musl`). PicoSOCKS5 uses POSIX.1-2017
+  (with XSI extensions) and following GNU extensions:
 
   - `vsyslog(3)`.
   - `getopt_long(3)`.
@@ -79,7 +80,8 @@ For building PicoSOCKS5 you'll need:
       will be used instead.
 
   So if you have another POSIX-compliant C runtime library that includes
-  these features, PicoSOCKS5 can be ported to it.
+  these features, PicoSOCKS5 can be ported to it. In particular, PicoSOCKS5
+  is known to successfully build and run with `musl` (version 1.2.2).
 
 - For crypto implementation, PicoSOCKS5 can use GnuTLS or OpenSSL library.
   Following features are used:

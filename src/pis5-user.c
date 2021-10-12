@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <crypt.h>
+#include <sys/socket.h>
 #include "util.h"
 #include "internal/prng.h"
 

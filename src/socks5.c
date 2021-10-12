@@ -14,6 +14,7 @@
 #include <syslog.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netdb.h>
 #if HAVE_IFADDRS_H
 #include <ifaddrs.h>
