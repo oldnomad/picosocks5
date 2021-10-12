@@ -32,6 +32,10 @@ static daemon_config_t CONFIG = {
  * Signal that resulted in exit.
  */
 static volatile sig_atomic_t EXIT_SIGNO = 0;
+/**
+ * Maximum file handle (from sysconf).
+ */
+static long MAX_FD = 0;
 
 /**
  * Fork to background.
@@ -92,13 +96,9 @@ static void daemonize(uid_t uid, gid_t gid)
 static void signal_handler(int signo)
 {
     int fd;
-    long maxfd;
 
     EXIT_SIGNO = signo;
-    maxfd = sysconf(_SC_OPEN_MAX);
-    if (maxfd <= 0)
-        maxfd = FD_SETSIZE;
-    for (fd = 3; fd < maxfd; fd++)
+    for (fd = 3; fd < MAX_FD; fd++)
         if (fcntl(fd, F_GETFD) != -1)
             close(fd);
 }
@@ -122,6 +122,9 @@ int main(int argc, char **argv)
     CONFIG.progname = argv[0];
     cmdline_process(argc, argv, &CONFIG);
     logger_init(CONFIG.nofork, CONFIG.logmode, CONFIG.loglevel);
+    MAX_FD = sysconf(_SC_OPEN_MAX);
+    if (MAX_FD <= 0)
+        MAX_FD = FD_SETSIZE;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGABRT, &sa, NULL);
     sigaction(SIGINT,  &sa, NULL);
