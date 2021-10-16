@@ -12,12 +12,12 @@
 
 The **picosocks5(8)** command starts a SOCKS5 daemon with configuration
 specified on the command line or in a configuration file given in command
-line option **--config**.
+line option **-\-config**.
 
 Note that all command line parameters are processed in order in which
 they appear on command line, so parameters specified later will, as a
 rule, override earlier ones. Exceptions to this rule are options
-**--config** and **--auth**.
+**-\-config** and **-\-auth**.
 
 The only non-option command line parameter specifies address and port
 at which the daemon will listen for client connections. This parameter
@@ -137,23 +137,23 @@ Listen port can be a decimal number of a service name (see **services**(5)).
 `-V`, `--version`
 :   Print program version and exit.
 
-## Note on effects of --nofork
+## Note on effects of -\-nofork
 
-Option **--nofork** instructs the daemon to stay in foreground, but it also
+Option **-\-nofork** instructs the daemon to stay in foreground, but it also
 has several side-effects:
 
   * Signals `SIGHUP` and `SIGPIPE` are not ignored.
-  * Privileges are not dropped, even if **--user** and **--group**
+  * Privileges are not dropped, even if **-\-user** and **-\-group**
     are specified.
-  * If **--logmode** is not specified, default log mode is not `"syslog"`,
+  * If **-\-logmode** is not specified, default log mode is not `"syslog"`,
     but `"stderr"`.
 
-Note also that if parent PID is 1, **--nofork** is the default.
+Note also that if parent PID is 1, **-\-nofork** is the default.
 
-## Note on --user and --group
+## Note on -\-user and -\-group
 
 Privileges are not dropped if the daemon is not started by a superuser,
-if parent PID is 1 (**init**(1)), or if **--nofork** is specified.
+if parent PID is 1 (**init**(1)), or if **-\-nofork** is specified.
 
 ## Note on IPv4 and IPv6 addresses
 
@@ -191,10 +191,10 @@ For most configuration parameters, parameter name is the same as
 corresponding command line option, without the `"--"` prefix.
 Exceptions are:
 
-  * Command line options **--help** and **--version** have no
+  * Command line options **-\-help** and **-\-version** have no
     corresponding configuration parameters.
   * Configuration parameter **include** corresponds to command
-    line option **--config**; that is, once this configuration
+    line option **-\-config**; that is, once this configuration
     parameter is encountered, a configuration file specified in
     it is immediately parsed before proceeding to the next
     configuration parameter in this file.
@@ -202,7 +202,7 @@ Exceptions are:
     line positional parameter (listen specification).
 
 Parameter values correspond to values specified for options. Values for
-boolean options (**--anonymous** and **--nofork**) are interpreted as
+boolean options (**-\-anonymous** and **-\-nofork**) are interpreted as
 boolean values, with `"yes"`, `"true"`, and `"1"` interpreted as a true
 value, and any other value as a false value.
 
@@ -219,10 +219,10 @@ ACL set section may include following parameters:
 
   * Configuration parameter **request**, containing rules allowing
     and disallowing specific types of requests. See command line
-    option **--request** for explanation.
+    option **-\-request** for explanation.
   * Configuration parameter **network**, containing rules allowing
     and disallowing IPv4 or IPv6 networks. See command line option
-    **--network** for explanation.
+    **-\-network** for explanation.
   * Configuration parameter **base**, specifying name of parent
     ACL set section. Rules from the parent section will be checked
     after rules specified in this section. If parent section is
@@ -251,7 +251,7 @@ appear. No checks for duplicates are performed.
 Authentication sources are initialized before dropping privileges, so,
 depending on the implementation, they may be readable only to the user
 invoking the daemon. They may be inaccessible to effective user and
-group specified in **--user** and **--group** options.
+group specified in **-\-user** and **-\-group** options.
 
 Currently the only format supported for authentication sources is
 `"password"`.

@@ -48,7 +48,7 @@ The callback function accepts following parameters:
   - `input` and `inplen`: pointer to input data and length of
     the data. Exact meaning of the input data depends on the
     method.
-  - `buffer` and `bufsize`L pointer to output buffer and its
+  - `buffer` and `bufsize`: pointer to output buffer and its
     size. Exact purpose and contents of the buffer depends on
     the method.
 
