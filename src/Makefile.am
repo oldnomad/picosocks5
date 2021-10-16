@@ -12,7 +12,7 @@ man1_MANS = pis5user.man
 man8_MANS = picosocks5.man
 endif
 SUFFIXES =  .man .md
-CLEANFILES = *.man
+CLEANFILES = *.man *.gcda *.gcno
 
 .md.man:
 	pandoc -s -t man -o $@ $<
