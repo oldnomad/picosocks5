@@ -31,7 +31,7 @@ struct authfile_container {
 /// List of parsed sources.
 static struct authfile_container *AUTHFILE_SOURCES[2] = { NULL, NULL };
 /// Flag allowing anonymous login
-static int AUTHFILE_ANONYMOUS = 1;
+static int AUTHFILE_ANONYMOUS = 0;
 
 /**
  * Manage anonymous allow flag.
