@@ -1,3 +1,14 @@
+picosocks5 (0.15) unstable; urgency=medium
+
+  * Moved sysconf() out of signal handler, since it's not signal safe
+    any more in recent POSIX versions.
+  * Make sure that PicoSOCKS5 builds with musl.
+  * Clean coverage reports, update debian builds.
+  * Restore old behavior of implicitly forbidding anonymous connections
+    if non-anonymous authentication methods are available.
+
+ -- Alec Kojaev <alec.kojaev@gmail.com>  Wed, 29 Dec 2021 04:48:12 +0300
+
 picosocks5 (0.14) unstable; urgency=medium
 
   * Use `getentropy(3)` for PRNG, if available. Otherwise,
