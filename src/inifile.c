@@ -318,7 +318,15 @@ int ini_args(int argc, char **argv, ini_section_cbk_t callback, void *context)
             goto ON_ERROR;
         }
         if (val < 256)
+        {
             opt = findopt_by_optchar(optlist, val);
+            if (opt == NULL) {
+                // This cannot happen, unless getopt_long is malicious
+                ini_error(&ctxt, "internal error parsing command line option: %s", argv[optind - 1]);
+                ret = -1;
+                goto ON_ERROR;
+            }
+        }
         else
             opt = &optlist[val - 256];
         switch (opt->type)
@@ -356,12 +364,21 @@ int ini_args(int argc, char **argv, ini_section_cbk_t callback, void *context)
         }
     }
     opt = findopt_by_optchar(optlist, 1);
-    for (idx = optind; idx < argc; idx++)
-        if (opt->callback(&ctxt, opt, argv[idx]) != 0)
-        {
-            ret = -1;
-            goto ON_ERROR;
-        }
+    if (opt != NULL)
+    {
+        for (idx = optind; idx < argc; idx++)
+            if (opt->callback(&ctxt, opt, argv[idx]) != 0)
+            {
+                ret = -1;
+                goto ON_ERROR;
+            }
+    }
+    else if (optind < argc)
+    {
+        ini_error(&ctxt, "unrecognized command line parameter: %s", argv[optind]);
+        ret = -1;
+        goto ON_ERROR;
+    }
 ON_ERROR:
     if (optarea != NULL)
         free(optarea);
